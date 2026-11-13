@@ -4,6 +4,7 @@
   "description": "Free and open-source music player that streams from YouTube",
   "main": "src/main.js",
   "license": "MIT",
+  "author": "OpenWave contributors",
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder"
@@ -15,6 +16,7 @@
   "build": {
     "appId": "io.github.openwave.app",
     "productName": "OpenWave",
+    "icon": "build/icon.png",
     "files": [
       "src/**/*",
       "package.json"
@@ -22,6 +24,9 @@
     "linux": {
       "target": ["AppImage", "tar.gz"],
       "category": "Audio"
+    },
+    "win": {
+      "target": ["portable", "nsis"]
     }
   }
 }

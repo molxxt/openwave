@@ -37,6 +37,16 @@ const queueSaveCancel = $('queue-save-cancel');
 const plTitle = $('pl-title');
 const plCount = $('pl-count');
 const playlistViewList = $('playlist-view-list');
+const plEditBtn = $('pl-edit-btn');
+const plEditOverlay = $('pl-edit-overlay');
+const plEditName = $('pl-edit-name');
+const plEditCoverImg = $('pl-edit-cover-img');
+const plEditCoverPh = $('pl-edit-cover-ph');
+const plEditCoverBtn = $('pl-edit-cover-btn');
+const plEditCoverRemove = $('pl-edit-cover-remove');
+const plEditFile = $('pl-edit-file');
+const plEditSave = $('pl-edit-save');
+const plEditCancel = $('pl-edit-cancel');
 const npThumb = $('np-thumb');
 const npTitle = $('np-title');
 const npChannel = $('np-channel');
@@ -565,7 +575,14 @@ function renderPlaylistsGrid() {
 
     const art = document.createElement('div');
     art.className = 'tile-art';
-    art.innerHTML = icon('note');
+    if (pl.cover) {
+      const img = document.createElement('img');
+      img.className = 'c-cover';
+      img.src = pl.cover;
+      art.append(img);
+    } else {
+      art.innerHTML = icon('note');
+    }
 
     const name = document.createElement('div');
     name.className = 'c-name';
@@ -630,6 +647,15 @@ $('queue-shuffle-btn').addEventListener('click', () => {
 
 // settings page (rail bottom button)
 $('rail-settings').addEventListener('click', () => setView('settings'));
+
+// expand / collapse the sidebar
+function applyRail() {
+  document.body.classList.toggle('rail-expanded', localStorage.getItem('openwave:rail') === 'wide');
+}
+$('rail-expand').addEventListener('click', () => {
+  const wide = document.body.classList.toggle('rail-expanded');
+  localStorage.setItem('openwave:rail', wide ? 'wide' : 'slim');
+});
 
 // ---------- settings page logic ----------
 function renderSettings() {
@@ -822,6 +848,7 @@ function openCtxMenu(x, y, track) {
 function openPlaylistCtxMenu(x, y, pl) {
   closeCtxMenu();
   ctxmenu.append(ctxItem('Open', () => setView('playlist', pl.name), 'note'));
+  ctxmenu.append(ctxItem('Edit name / image', () => openPlaylistEditor(pl.name), 'note'));
   ctxmenu.append(ctxItem('Play all', () => {
     if (!pl.tracks.length) { setStatus('This playlist is empty.'); return; }
     queue = pl.tracks.map(t => ({ ...t }));
@@ -886,8 +913,109 @@ function showCtxNewPlaylist(track) {
 }
 
 document.addEventListener('click', closeCtxMenu);
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCtxMenu(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeCtxMenu();
+    if (!plEditOverlay.hidden) closePlaylistEditor();
+  }
+});
 window.addEventListener('blur', closeCtxMenu);
+
+// ---------- playlist editor ----------
+let editingPlaylist = null;
+let pendingCover = null;
+
+function openPlaylistEditor(name) {
+  const pl = playlists.find(p => p.name === name);
+  if (!pl) return;
+  editingPlaylist = pl;
+  pendingCover = pl.cover || null;
+  plEditName.value = pl.name;
+  updateCoverPreview();
+  plEditOverlay.hidden = false;
+  plEditName.focus();
+}
+
+function closePlaylistEditor() {
+  plEditOverlay.hidden = true;
+  editingPlaylist = null;
+  pendingCover = null;
+  plEditFile.value = '';
+}
+
+function updateCoverPreview() {
+  if (pendingCover) {
+    plEditCoverImg.src = pendingCover;
+    plEditCoverImg.hidden = false;
+    plEditCoverPh.hidden = true;
+    plEditCoverRemove.hidden = false;
+  } else {
+    plEditCoverImg.hidden = true;
+    plEditCoverPh.hidden = false;
+    plEditCoverRemove.hidden = true;
+  }
+}
+
+plEditBtn.addEventListener('click', () => openPlaylistEditor(view.name));
+plEditCancel.addEventListener('click', closePlaylistEditor);
+
+plEditCoverBtn.addEventListener('click', () => plEditFile.click());
+plEditCoverRemove.addEventListener('click', () => {
+  pendingCover = null;
+  updateCoverPreview();
+});
+
+// pick an image, downscale it so it stays small in storage, preview it
+plEditFile.addEventListener('change', () => {
+  const file = plEditFile.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const max = 400; // plenty for a cover, tiny in storage
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      pendingCover = canvas.toDataURL('image/jpeg', 0.85);
+      updateCoverPreview();
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+  plEditFile.value = '';
+});
+
+plEditSave.addEventListener('click', () => {
+  if (!editingPlaylist) return;
+  const newName = plEditName.value.trim();
+  if (!newName || newName === LIKED) return;
+  if (newName !== editingPlaylist.name && playlists.some(p => p.name === newName)) {
+    setStatus(`A playlist called “${newName}” already exists.`);
+    return;
+  }
+  editingPlaylist.name = newName;
+  if (pendingCover) editingPlaylist.cover = pendingCover;
+  else delete editingPlaylist.cover;
+  savePlaylists();
+  const wasOpen = view.type === 'playlist' && view.name === editingPlaylist.name;
+  closePlaylistEditor();
+  if (wasOpen) {
+    view.name = newName;
+    renderView();
+  } else {
+    renderView();
+  }
+  renderHomeTiles();
+  setStatus('Playlist updated.');
+});
+
+// click on the dark backdrop also closes the editor
+plEditOverlay.addEventListener('mousedown', (e) => {
+  if (e.target === plEditOverlay) closePlaylistEditor();
+});
 
 // ---------- playlist view ----------
 function renderPlaylistView() {
@@ -1097,6 +1225,7 @@ document.addEventListener('keydown', (e) => {
 
 // ---------- boot ----------
 applySettings();
+applyRail();
 loadState();
 loadPlaylists();
 loadLiked();

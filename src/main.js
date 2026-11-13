@@ -14,6 +14,8 @@ const { URL } = require('url');
 const YTDLP = process.env.YTDLP_PATH || 'yt-dlp';
 
 let mainWindow = null;
+let proxyServer = null;
+let proxyPort = null;
 
 // ------------------------------------------------------------
 // yt-dlp helpers
@@ -154,9 +156,6 @@ function startProxyServer() {
     server.listen(0, '127.0.0.1', () => resolve(server));
   });
 }
-
-let proxyServer = null;
-let proxyPort = null;
 
 // ------------------------------------------------------------
 // IPC API exposed to the renderer (UI) process
