@@ -194,6 +194,7 @@ function createWindow() {
     minHeight: 520,
     title: 'OpenWave',
     backgroundColor: '#121218',
+    icon: path.join(__dirname, 'assets', 'icon.png'), // taskbar / dock icon while running
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true, // renderer can't touch Node directly (safe by default)
