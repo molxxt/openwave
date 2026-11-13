@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- OpenWave app icon: dark rounded square, lavender waveform forming a "W" -->
+  <rect x="2" y="2" width="60" height="60" rx="15" fill="#121212"/>
+  <rect x="2.75" y="2.75" width="58.5" height="58.5" rx="14.25" fill="none" stroke="#2e2e34" stroke-width="1.5"/>
+  <g fill="#a5a6f6">
+    <rect x="14" y="26" width="4.5" height="12" rx="2.25"/>
+    <rect x="21.5" y="19" width="4.5" height="26" rx="2.25" opacity="0.85"/>
+    <rect x="29" y="13" width="4.5" height="38" rx="2.25"/>
+    <rect x="36.5" y="19" width="4.5" height="26" rx="2.25" opacity="0.85"/>
+    <rect x="44" y="26" width="4.5" height="12" rx="2.25"/>
+  </g>
+</svg>
