@@ -8,10 +8,9 @@ const { execFile } = require('child_process');
 const path = require('path');
 const http = require('http');
 const https = require('https');
+const fs = require('fs');
+const os = require('os');
 const { URL } = require('url');
-
-// yt-dlp binary name (or full path) — override with YTDLP_PATH env var
-const YTDLP = process.env.YTDLP_PATH || 'yt-dlp';
 
 let mainWindow = null;
 let proxyServer = null;
@@ -22,14 +21,38 @@ let proxyPort = null;
 // ----------------------------------------------------------
 const APP_REPO = 'molxxt/openwave'; // change if you rename the repo
 
+// yt-dlp resolution: prefer a binary bundled with the app (extraResources),
+// fall back to whatever the OS provides. Bundling means users install nothing.
+const YTDLP_NAME = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp-linux';
+let ytdlpPathCache = null;
+
+function findYtDlp() {
+  if (ytdlpPathCache) return ytdlpPathCache;
+  if (process.env.YTDLP_PATH) return (ytdlpPathCache = process.env.YTDLP_PATH);
+
+  const candidates = [];
+  if (process.resourcesPath) candidates.push(path.join(process.resourcesPath, YTDLP_NAME));
+  candidates.push(path.join(__dirname, '..', 'build', YTDLP_NAME));
+  for (const p of candidates) {
+    try {
+      if (fs.existsSync(p)) {
+        if (process.platform !== 'win32') { try { fs.chmodSync(p, 0o755); } catch { /* ignore */ } }
+        return (ytdlpPathCache = p);
+      }
+    } catch { /* ignore */ }
+  }
+  return null; // caller falls back to the system 'yt-dlp'
+}
+
 /** Run yt-dlp with the given arguments, return stdout as a string. */
 function ytdlp(args) {
+  const bin = findYtDlp() || 'yt-dlp';
   return new Promise((resolve, reject) => {
-    execFile(YTDLP, args, { maxBuffer: 20 * 1024 * 1024 }, (err, stdout, stderr) => {
+    execFile(bin, args, { maxBuffer: 20 * 1024 * 1024 }, (err, stdout, stderr) => {
       if (err) {
         const msg = (stderr || err.message || '').trim();
         if (err.code === 'ENOENT') {
-          reject(new Error('yt-dlp was not found. Install it first: https://github.com/yt-dlp/yt-dlp#installation'));
+          reject(new Error('yt-dlp is not available. Install it and press Check again, or restart OpenWave.'));
         } else {
           reject(new Error(msg || 'yt-dlp failed'));
         }
@@ -200,7 +223,7 @@ ipcMain.on('theme:background', (_event, theme) => {
 
 // startup system check: is yt-dlp available? is ffmpeg?
 ipcMain.handle('system:check', () => new Promise((resolve) => {
-  execFile(YTDLP, ['--version'], { timeout: 15000 }, (err, stdout) => {
+  execFile(findYtDlp() || 'yt-dlp', ['--version'], { timeout: 15000 }, (err, stdout) => {
     const ytdlpVersion = err ? null : String(stdout || '').trim() || null;
     execFile('ffmpeg', ['-version'], { timeout: 15000 }, (err2) => {
       resolve({ ytdlpVersion, ffmpeg: !err2 });

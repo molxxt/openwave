@@ -1470,9 +1470,17 @@ function showInstallInstructions() {
   splashInstructions.textContent = '';
 
   if (navigator.userAgent.includes('Windows')) {
+    const dl = document.createElement('a');
+    dl.href = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe';
+    dl.textContent = 'Or download yt-dlp.exe directly (then press Check again)';
+    dl.style.color = 'var(--accent)';
+    dl.style.cursor = 'pointer';
+    dl.style.textDecoration = 'underline';
+    dl.addEventListener('click', (e) => { e.preventDefault(); window.api.openExternal(dl.href); });
     splashInstructions.append(
       mkInstTitle('Windows — pick one'),
-      mkInstCode('winget install yt-dlp', 'easiest'),
+      dl,
+      mkInstCode('winget install yt-dlp', 'or via terminal'),
       mkInstCode('scoop install yt-dlp'),
     );
   } else {
