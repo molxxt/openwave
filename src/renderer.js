@@ -51,6 +51,8 @@ const npThumb = $('np-thumb');
 const npTitle = $('np-title');
 const npChannel = $('np-channel');
 const btnLike = $('btn-like');
+const btnRepeat = $('btn-repeat');
+const btnMute = $('btn-mute');
 const btnPrev = $('btn-prev');
 const btnPlay = $('btn-play');
 const btnNext = $('btn-next');
@@ -84,6 +86,9 @@ const ICONS = {
   plus: '<path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M12 5.5v13M5.5 12h13"/>',
   note: '<path d="M9.5 18.7a3 3 0 1 1-2-2.83V5.5c0-.5.37-.93.86-1L17.6 3a1 1 0 0 1 1.14.99v10.3a2.9 2.9 0 1 1-2-2.6V8.3l-7.24 1.77v8.63z"/>',
   clock: '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 7.2v5l3.4 2"/><circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" stroke-width="2"/>',
+  repeat: '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M17 2l4 4-4 4"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 11v-1a4 4 0 0 1 4-4h14"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M7 22l-4-4 4-4"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 13v1a4 4 0 0 1-4 4H3"/>',
+  volume: '<path d="M4 9.8v4.4c0 .55.45 1 1 1h2.6l3.8 3.3c.65.56 1.6.1 1.6-.75V6.25c0-.85-.95-1.31-1.6-.75L7.6 8.8H5c-.55 0-1 .45-1 1z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M15.8 9.2a4 4 0 0 1 0 5.6M18.2 7a7 7 0 0 1 0 10"/>',
+  mute: '<path d="M4 9.8v4.4c0 .55.45 1 1 1h2.6l3.8 3.3c.65.56 1.6.1 1.6-.75V6.25c0-.85-.95-1.31-1.6-.75L7.6 8.8H5c-.55 0-1 .45-1 1z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16 9.5l5 5M21 9.5l-5 5"/>',
   queue: '<rect x="3.5" y="5.4" width="13.5" height="2.5" rx="1.25"/><rect x="3.5" y="10.75" width="13.5" height="2.5" rx="1.25"/><rect x="3.5" y="16.1" width="9" height="2.5" rx="1.25"/><path d="M18.6 12.4v6.7c0 .77.85 1.24 1.5.83l4.5-2.85a.98.98 0 0 0 0-1.66l-4.5-2.85c-.65-.41-1.5.06-1.5.83z"/>',
 };
 function icon(name) {
@@ -247,7 +252,7 @@ function refreshNpLike() {
 }
 
 // ---------- generic track row builder ----------
-function trackEl(track, onClick, { removable = false } = {}) {
+function trackEl(track, onClick, { removable = false, reorderable = false, index = 0 } = {}) {
   const li = document.createElement('li');
   li.className = 'track' + (queue[current]?.id === track.id ? ' playing' : '');
   li.dataset.id = track.id;
@@ -307,14 +312,54 @@ function trackEl(track, onClick, { removable = false } = {}) {
     e.preventDefault();
     openCtxMenu(e.clientX, e.clientY, track);
   });
+
+  // drag-to-reorder (queue only)
+  if (reorderable) {
+    li.draggable = true;
+    li.addEventListener('dragstart', (e) => {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(index));
+      li.classList.add('dragging');
+    });
+    li.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      li.classList.add('drag-over');
+    });
+    li.addEventListener('dragleave', () => li.classList.remove('drag-over'));
+    li.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      li.classList.remove('drag-over');
+      const from = parseInt(e.dataTransfer.getData('text/plain'), 10);
+      if (!isNaN(from) && from !== index) moveInQueue(from, index);
+    });
+    li.addEventListener('dragend', () => {
+      li.classList.remove('dragging');
+      document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    });
+  }
   return li;
+}
+
+// move a queue entry, keeping the playing track's identity intact
+function moveInQueue(from, to) {
+  if (from < 0 || from >= queue.length || to < 0 || to >= queue.length) return;
+  const [moved] = queue.splice(from, 1);
+  queue.splice(to, 0, moved);
+  if (current === from) current = to;
+  else if (from < current && to >= current) current--;
+  else if (from > current && to <= current) current++;
+  saveState();
+  renderQueueView();
+  highlightPlaying();
 }
 
 function renderTrackList(container, tracks, opts) {
   container.textContent = '';
-  for (const track of tracks) {
-    container.append(trackEl(track, () => playTrack(track), opts));
-  }
+  tracks.forEach((track, i) => {
+    container.append(trackEl(track, () => playTrack(track), { ...opts, index: i }));
+  });
 }
 
 // friendly empty state instead of a blank list
@@ -367,10 +412,26 @@ function highlightPlaying() {
 }
 
 // ---------- home dashboard ----------
-function pillRow(text, dim = false) {
+// hard character caps — guaranteed truncation, immune to layout quirks
+function trunc(text, max = 26) {
+  return text.length > max ? text.slice(0, max - 1).trimEnd() + '…' : text;
+}
+
+function pillRow(textOrTrack, dim = false) {
   const div = document.createElement('div');
   div.className = 'tile-pill' + (dim ? ' dim' : '');
-  div.textContent = text;
+  if (typeof textOrTrack === 'string') {
+    div.textContent = trunc(textOrTrack, 34);
+  } else {
+    // media pill: mini thumbnail + truncated title
+    const img = document.createElement('img');
+    img.src = textOrTrack.thumb;
+    img.loading = 'lazy';
+    const span = document.createElement('span');
+    span.textContent = trunc(textOrTrack.title, 26);
+    span.title = textOrTrack.title; // full name on hover
+    div.append(img, span);
+  }
   return div;
 }
 
@@ -389,7 +450,7 @@ function renderHomeTiles() {
   tileRecsPills.textContent = '';
   const recs = recTracks();
   if (recs.length) {
-    for (const t of recs.slice(0, 2)) tileRecsPills.append(pillRow(t.title));
+    for (const t of recs.slice(0, 2)) tileRecsPills.append(pillRow(t));
   } else {
     tileRecsPills.append(pillRow('Play something to get recommendations', true));
   }
@@ -398,7 +459,7 @@ function renderHomeTiles() {
   tileLikedSub.textContent = likedSongs.length ? `${likedSongs.length} song${likedSongs.length === 1 ? '' : 's'}` : 'Your favorites';
   tileLikedPills.textContent = '';
   if (likedSongs.length) {
-    for (const t of likedSongs.slice(0, 2)) tileLikedPills.append(pillRow(t.title));
+    for (const t of likedSongs.slice(0, 2)) tileLikedPills.append(pillRow(t));
   } else {
     tileLikedPills.append(pillRow('Nothing liked yet', true));
   }
@@ -427,10 +488,10 @@ function mediaCard(track) {
   img.loading = 'lazy';
   const title = document.createElement('div');
   title.className = 'm-title';
-  title.textContent = track.title;
+  title.textContent = trunc(track.title, 60);
   const ch = document.createElement('div');
   ch.className = 'm-channel';
-  ch.textContent = track.channel;
+  ch.textContent = trunc(track.channel, 40);
   card.append(img, title, ch);
   card.addEventListener('click', () => playTrack(track));
   card.addEventListener('contextmenu', (e) => {
@@ -631,7 +692,7 @@ function renderPlaylistsGrid() {
 // ---------- queue ----------
 function renderQueueView() {
   queueCount.textContent = queue.length ? `· ${queue.length}` : '';
-  renderTrackList(queueList, queue, { removable: true });
+  renderTrackList(queueList, queue, { removable: true, reorderable: true });
   if (!queue.length) {
     emptyState(queueList, 'Your queue is empty — search for something, or load a playlist.');
   }
@@ -856,6 +917,19 @@ function openCtxMenu(x, y, track) {
   closeCtxMenu();
 
   ctxmenu.append(ctxItem('Play now', () => playTrack(track), 'play'));
+  ctxmenu.append(ctxItem('Play next', () => {
+    if (!queue.some(t => t.id === track.id)) {
+      queue.splice(current + 1, 0, { ...track });
+    } else {
+      // already queued: move it to right after the current song
+      const i = queue.findIndex(t => t.id === track.id);
+      const [t] = queue.splice(i, 1);
+      queue.splice(Math.max(current + (i <= current ? 1 : 0), 0), 0, t);
+    }
+    saveState();
+    if (view.type === 'queue') renderQueueView();
+    setStatus(`“${track.title}” plays next.`);
+  }, 'plus'));
   ctxmenu.append(ctxItem('Add to queue', () => addToQueue(track), 'plus'));
 
   ctxmenu.append(ctxSep());
@@ -1198,9 +1272,48 @@ audio.addEventListener('pause', () => {
   npThumb.classList.remove('playing');
 });
 audio.addEventListener('ended', () => {
-  if (settings.autoplayNext) next();
-  else stopPlayback();
+  if (repeatMode === 'one') {
+    audio.currentTime = 0;
+    audio.play();
+    return;
+  }
+  if (!settings.autoplayNext) {
+    stopPlayback();
+    return;
+  }
+  if (repeatMode === 'all' && current === queue.length - 1) playIndex(0);
+  else next();
 });
+
+// ---------- repeat & mute ----------
+let repeatMode = localStorage.getItem('openwave:repeat') || 'off';
+
+function applyRepeat() {
+  btnRepeat.classList.toggle('active', repeatMode !== 'off');
+  btnRepeat.title = `Repeat: ${repeatMode} (R)`;
+  btnRepeat.innerHTML = icon('repeat') + (repeatMode === 'one' ? '<span class="r-one">1</span>' : '');
+  localStorage.setItem('openwave:repeat', repeatMode);
+}
+
+btnRepeat.addEventListener('click', () => {
+  repeatMode = repeatMode === 'off' ? 'all' : repeatMode === 'all' ? 'one' : 'off';
+  applyRepeat();
+  setStatus(repeatMode === 'off' ? 'Repeat off.' : repeatMode === 'all' ? 'Repeating the whole queue.' : 'Repeating this song.');
+});
+applyRepeat();
+
+function updateMuteIcon() {
+  const muted = audio.muted || audio.volume === 0;
+  btnMute.classList.toggle('muted', muted);
+  btnMute.innerHTML = icon(muted ? 'mute' : 'volume');
+  btnMute.title = muted ? 'Unmute (M)' : 'Mute (M)';
+}
+
+btnMute.addEventListener('click', () => {
+  audio.muted = !audio.muted;
+  updateMuteIcon();
+});
+updateMuteIcon();
 
 // stream URLs can expire between sessions — retry once with a fresh resolve
 audio.addEventListener('error', () => {
@@ -1258,9 +1371,11 @@ seek.addEventListener('change', () => {
 });
 
 volume.addEventListener('input', () => {
+  if (audio.muted && volume.value > 0) audio.muted = false; // moving the slider unmutes
   audio.volume = volume.value / 100;
   localStorage.setItem('openwave:volume', volume.value);
   updateRangeFill(volume);
+  updateMuteIcon();
 });
 audio.volume = (Number(localStorage.getItem('openwave:volume')) || 80) / 100;
 volume.value = audio.volume * 100;
@@ -1273,6 +1388,8 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'n') next();
   else if (e.key === 'p') prev();
   else if (e.key === 'l') toggleLike(queue[current]);
+  else if (e.key === 'r') btnRepeat.click();
+  else if (e.key === 'm') btnMute.click();
 });
 
 // ---------- startup splash ----------

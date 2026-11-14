@@ -365,48 +365,85 @@ body.rail-expanded #rail-expand .ic { transform: scaleX(-1); }
 
 .tiles {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
 }
 
 .tile {
+  min-width: 0; /* let long titles truncate instead of widening the grid */
   border: none;
   background: var(--bg);
-  border-radius: 18px;
-  padding: 16px;
+  border-radius: 16px;
+  padding: 14px;
   cursor: pointer;
   text-align: left;
   color: var(--text);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   transition: background 0.15s, transform 0.15s;
   animation: rise 0.3s ease both;
 }
 .tile:hover { background: var(--bg-hover); transform: translateY(-2px); }
 .tile:active { transform: translateY(0); }
 
+.tile-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.tile-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  background: var(--accent-soft);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+.tile-icon .ic { width: 22px; height: 22px; color: var(--accent); }
+.tile:hover .tile-icon { transform: scale(1.08) rotate(-3deg); }
+.tile-heading { min-width: 0; }
+
+/* shared art container (playlist cards + editor) */
 .tile-art {
+  position: relative;
+  overflow: hidden;
   aspect-ratio: 1;
   border-radius: 14px;
   background: var(--accent-soft);
   display: grid;
   place-items: center;
-  margin-bottom: 6px;
 }
-.tile-art .ic { width: 52px; height: 52px; color: var(--accent); transition: transform 0.2s; }
-.tile:hover .tile-art .ic { transform: scale(1.1) rotate(-3deg); }
+.tile-art .ic { color: var(--accent); }
 
-.tile-title { font-size: 17px; font-weight: 700; }
-.tile-sub { font-size: 12px; color: var(--text-dim); margin-top: -6px; }
+.tile-title { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile-sub { font-size: 12px; color: var(--text-dim); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.tile-pills { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.tile-pills { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .tile-pill {
-  padding: 9px 12px;
-  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 10px 6px 6px;
+  border-radius: 9px;
   background: var(--bg-raised);
   font-size: 12.5px;
   color: var(--text-dim);
+  min-width: 0;
+  overflow: hidden;
+}
+.tile-pill img {
+  width: 32px;
+  height: 22px;
+  border-radius: 5px;
+  object-fit: cover;
+  background: var(--bg-hover);
+  flex-shrink: 0;
+}
+.tile-pill span {
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -942,8 +979,22 @@ ul { list-style: none; }
 .icon-btn .ic { width: 17px; height: 17px; }
 .icon-btn:hover { background: var(--bg-hover); color: var(--text); }
 
-#np-volume { display: flex; align-items: center; gap: 10px; color: var(--text-dim); flex: 1; }
-#np-volume .ic { width: 16px; height: 16px; flex-shrink: 0; }
+#np-volume { display: flex; align-items: center; gap: 8px; color: var(--text-dim); flex: 1; }
+#btn-mute {
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  transition: color 0.15s;
+  flex-shrink: 0;
+}
+#btn-mute .ic { width: 16px; height: 16px; }
+#btn-mute:hover { color: var(--text); }
+#btn-mute.muted { color: var(--danger); }
 #volume { flex: 1; min-width: 60px; }
 
 /* fully custom sliders — flat track, accent fill, small thumb, no outlines */
