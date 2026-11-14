@@ -181,7 +181,8 @@ ipcMain.handle('trending:youtube', () => fetchTrending());
 // keep the window's background color in sync with the chosen theme (no startup flash)
 ipcMain.on('theme:background', (_event, theme) => {
   if (mainWindow) {
-    mainWindow.setBackgroundColor(theme === 'light' ? '#f4f4f6' : '#121212');
+    const color = theme === 'light' ? '#f4f4f6' : theme === 'oled' ? '#000000' : '#121212';
+    mainWindow.setBackgroundColor(color);
   }
 });
 

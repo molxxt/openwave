@@ -24,6 +24,16 @@
   --border: #e2e2e6;
 }
 
+/* OLED theme — pure black, for OLED screens and true darkness enjoyers */
+:root[data-theme="oled"] {
+  --bg: #000000;
+  --bg-raised: #0a0a0a;
+  --bg-hover: #161616;
+  --border: #232323;
+  --text: #e9e8ee;
+  --text-dim: #8f8d99;
+}
+
 /* white-on-gray needs a touch of depth in light mode */
 :root[data-theme="light"] #topbar,
 :root[data-theme="light"] #rail,
@@ -968,6 +978,74 @@ input[type="range"]::-webkit-slider-thumb {
 }
 input[type="range"]::-webkit-slider-thumb:hover {
   transform: scale(1.2);
+}
+
+/* ---------- roundness presets ---------- */
+:root.r-sharp .rail-btn,
+:root.r-sharp .win-btn,
+:root.r-sharp .icon-btn,
+:root.r-sharp .view-actions button,
+:root.r-sharp #queue-save-form button,
+:root.r-sharp #pl-new-form button,
+:root.r-sharp #search-input,
+:root.r-sharp .btn-accent,
+:root.r-sharp .set-nav,
+:root.r-sharp .set-row,
+:root.r-sharp .set-btn,
+:root.r-sharp .seg,
+:root.r-sharp .track,
+:root.r-sharp .playlist-row,
+:root.r-sharp .tile,
+:root.r-sharp .tile-art,
+:root.r-sharp .pl-card,
+:root.r-sharp .media-card img,
+:root.r-sharp #np-thumb,
+:root.r-sharp .tile-pill,
+:root.r-sharp .sh-item,
+:root.r-sharp .empty-state,
+:root.r-sharp #status,
+:root.r-sharp .ctx-item,
+:root.r-sharp #ctxmenu,
+:root.r-sharp #search-history,
+:root.r-sharp #pl-edit-dialog,
+:root.r-sharp #splash-error,
+:root.r-sharp .home-panel,
+:root.r-sharp .settings-layout {
+  border-radius: 2px !important;
+}
+
+:root.r-round .rail-btn,
+:root.r-round .win-btn,
+:root.r-round .icon-btn,
+:root.r-round .view-actions button,
+:root.r-round #queue-save-form button,
+:root.r-round #pl-new-form button,
+:root.r-round .btn-accent,
+:root.r-round .set-nav,
+:root.r-round .set-row,
+:root.r-round .set-btn,
+:root.r-round .seg,
+:root.r-round .track,
+:root.r-round .playlist-row,
+:root.r-round .tile-pill,
+:root.r-round .sh-item,
+:root.r-round .ctx-item {
+  border-radius: 17px !important;
+}
+:root.r-round .tile,
+:root.r-round .tile-art,
+:root.r-round .pl-card,
+:root.r-round .media-card img,
+:root.r-round #np-thumb,
+:root.r-round #search-input {
+  border-radius: 24px !important;
+}
+:root.r-round .home-panel,
+:root.r-round .settings-layout,
+:root.r-round #pl-edit-dialog,
+:root.r-round #ctxmenu,
+:root.r-round #search-history {
+  border-radius: 30px !important;
 }
 
 /* ---------- startup splash ---------- */

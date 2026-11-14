@@ -134,7 +134,7 @@ function loadRecent() {
 // ---------- settings ----------
 const ACCENT_PRESETS = ['#a5a6f6', '#8fd3f6', '#8fe3b0', '#f6a5c0', '#f6c46b', '#f68c6b'];
 // ---------- search ----------
-const SETTINGS_DEFAULTS = { accent: '#a5a6f6', autoplayNext: true, theme: 'dark' };
+const SETTINGS_DEFAULTS = { accent: '#a5a6f6', autoplayNext: true, theme: 'dark', roundness: 'default' };
 let settings = (() => {
   try {
     const saved = JSON.parse(localStorage.getItem('openwave:settings'));
@@ -164,8 +164,11 @@ function applySettings() {
   root.style.setProperty('--accent-strong', lighten(settings.accent));
   const [r, g, b] = hexToRgb(settings.accent);
   root.style.setProperty('--accent-soft', `rgba(${r}, ${g}, ${b}, 0.12)`);
-  root.dataset.theme = settings.theme || 'dark';
-  window.api.setBackground(settings.theme || 'dark');
+  const theme = settings.theme || 'dark';
+  root.dataset.theme = theme;
+  root.classList.toggle('r-sharp', settings.roundness === 'sharp');
+  root.classList.toggle('r-round', settings.roundness === 'round');
+  window.api.setBackground(theme);
 }
 
 // ---------- search history ----------
@@ -689,6 +692,10 @@ function renderSettings() {
   for (const b of document.querySelectorAll('#theme-seg button')) {
     b.classList.toggle('active', (settings.theme || 'dark') === b.dataset.theme);
   }
+  // roundness segmented control
+  for (const b of document.querySelectorAll('#round-seg button')) {
+    b.classList.toggle('active', (settings.roundness || 'default') === b.dataset.round);
+  }
   const sw = $('accent-swatches');
   sw.textContent = '';
   for (const c of ACCENT_PRESETS) {
@@ -736,7 +743,16 @@ for (const b of document.querySelectorAll('#theme-seg button')) {
     saveSettings();
     applySettings();
     renderSettings();
-    setStatus(settings.theme === 'light' ? 'Light mode on ☀' : 'Dark mode on ☾');
+    setStatus(settings.theme === 'light' ? 'Light mode on ☀' : settings.theme === 'oled' ? 'OLED mode on — enjoy the blacks.' : 'Dark mode on ☾');
+  });
+}
+
+for (const b of document.querySelectorAll('#round-seg button')) {
+  b.addEventListener('click', () => {
+    settings.roundness = b.dataset.round;
+    saveSettings();
+    applySettings();
+    renderSettings();
   });
 }
 
