@@ -995,6 +995,7 @@ ul { list-style: none; }
 #btn-mute .ic { width: 16px; height: 16px; }
 #btn-mute:hover { color: var(--text); }
 #btn-mute.muted { color: var(--danger); }
+#btn-sleep.active { color: var(--accent); background: var(--accent-soft); }
 #volume { flex: 1; min-width: 60px; }
 
 /* fully custom sliders — flat track, accent fill, small thumb, no outlines */

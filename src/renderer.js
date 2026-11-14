@@ -1257,6 +1257,7 @@ function stopPlayback() {
   timeCurrent.textContent = '0:00';
   timeTotal.textContent = '0:00';
   refreshNpLike();
+  updateRangeFill(seek);
 }
 
 function togglePlay() {
