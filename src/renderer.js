@@ -165,6 +165,7 @@ function applySettings() {
   const [r, g, b] = hexToRgb(settings.accent);
   root.style.setProperty('--accent-soft', `rgba(${r}, ${g}, ${b}, 0.12)`);
   root.dataset.theme = settings.theme || 'dark';
+  window.api.setBackground(settings.theme || 'dark');
 }
 
 // ---------- search history ----------
@@ -264,6 +265,12 @@ function trackEl(track, onClick, { removable = false } = {}) {
 
   li.append(img, meta);
 
+  // animated equalizer shown on whichever track is playing
+  const eq = document.createElement('div');
+  eq.className = 'eq';
+  eq.innerHTML = '<i></i><i></i><i></i>';
+  li.append(eq);
+
   const like = document.createElement('button');
   like.className = 't-like';
   like.dataset.id = track.id;
@@ -305,6 +312,19 @@ function renderTrackList(container, tracks, opts) {
   for (const track of tracks) {
     container.append(trackEl(track, () => playTrack(track), opts));
   }
+}
+
+// friendly empty state instead of a blank list
+function emptyState(container, message) {
+  const li = document.createElement('li');
+  li.className = 'empty-state';
+  const ic = document.createElement('div');
+  ic.className = 'es-icon';
+  ic.innerHTML = icon('note');
+  const p = document.createElement('p');
+  p.textContent = message;
+  li.append(ic, p);
+  container.append(li);
 }
 
 // ---------- views ----------
@@ -520,7 +540,6 @@ async function doSearch(q) {
   pushSearchHistory(q);
   setView('results');
 }
-
 searchForm.addEventListener('submit', (e) => {
   e.preventDefault();
   doSearch(searchInput.value);
@@ -528,7 +547,12 @@ searchForm.addEventListener('submit', (e) => {
 });
 
 function renderResultsView() {
+  resultsTitle.textContent = resultsTitle.textContent.replace(/\s·\s\d+$/, '')
+    + (searchResults.length ? ` · ${searchResults.length}` : '');
   renderTrackList(resultsList, searchResults, {});
+  if (!searchResults.length) {
+    emptyState(resultsList, 'No results — try different words, or check the artist spelling.');
+  }
 }
 
 // ---------- recommendations / liked / playlists views ----------
@@ -546,17 +570,16 @@ function renderForYouView() {
   const recs = recTracks();
   renderTrackList(foryouList, recs, {});
   if (!recs.length) {
-    foryouList.textContent = '';
-    const li = document.createElement('li');
-    li.className = 'empty';
-    li.textContent = 'Play or like a few songs and they will show up here.';
-    foryouList.append(li);
+    emptyState(foryouList, 'Play or like a few songs and they will show up here.');
   }
 }
 
 function renderLikedView() {
   likedCount.textContent = likedSongs.length ? `· ${likedSongs.length}` : '';
   renderTrackList(likedList, likedSongs.map(t => ({ ...t })), {});
+  if (!likedSongs.length) {
+    emptyState(likedList, 'Nothing here yet — press L while a song plays, or click the ♡ on any track.');
+  }
 }
 
 function renderPlaylistsGrid() {
@@ -606,6 +629,9 @@ function renderPlaylistsGrid() {
 function renderQueueView() {
   queueCount.textContent = queue.length ? `· ${queue.length}` : '';
   renderTrackList(queueList, queue, { removable: true });
+  if (!queue.length) {
+    emptyState(queueList, 'Your queue is empty — search for something, or load a playlist.');
+  }
 }
 
 // playback helpers
@@ -1195,24 +1221,34 @@ btnPrev.addEventListener('click', prev);
 audio.addEventListener('timeupdate', () => {
   if (isSeeking || !isFinite(audio.duration)) return;
   seek.value = Math.round((audio.currentTime / audio.duration) * 1000);
+  updateRangeFill(seek);
   timeCurrent.textContent = fmtTime(audio.currentTime);
   timeTotal.textContent = fmtTime(audio.duration);
 });
 
-seek.addEventListener('input', () => { isSeeking = true; });
+// paint the filled portion of a slider via --fill (used by the track gradient)
+function updateRangeFill(input) {
+  const pct = ((input.value - input.min) / (input.max - input.min)) * 100;
+  input.style.setProperty('--fill', pct + '%');
+}
+
+seek.addEventListener('input', () => { isSeeking = true; updateRangeFill(seek); });
 seek.addEventListener('change', () => {
   if (isFinite(audio.duration)) {
     audio.currentTime = (seek.value / 1000) * audio.duration;
   }
   isSeeking = false;
+  updateRangeFill(seek);
 });
 
 volume.addEventListener('input', () => {
   audio.volume = volume.value / 100;
   localStorage.setItem('openwave:volume', volume.value);
+  updateRangeFill(volume);
 });
 audio.volume = (Number(localStorage.getItem('openwave:volume')) || 80) / 100;
 volume.value = audio.volume * 100;
+updateRangeFill(volume);
 
 // keyboard shortcuts
 document.addEventListener('keydown', (e) => {
@@ -1223,6 +1259,95 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'l') toggleLike(queue[current]);
 });
 
+// ---------- startup splash ----------
+const splash = $('splash');
+const splashStatus = $('splash-status');
+const splashError = $('splash-error');
+const splashInstructions = $('splash-instructions');
+
+function hideSplash() {
+  splash.classList.add('out');
+  setTimeout(() => { splash.hidden = true; }, 450);
+}
+
+function mkInstTitle(t) {
+  const d = document.createElement('div');
+  d.className = 'inst-title';
+  d.textContent = t;
+  return d;
+}
+
+function mkInstCode(cmd, note) {
+  const wrap = document.createElement('div');
+  if (note) {
+    const n = document.createElement('div');
+    n.className = 'inst-note';
+    n.textContent = note;
+    wrap.append(n);
+  }
+  const code = document.createElement('code');
+  code.textContent = cmd;
+  code.title = 'Click to copy';
+  code.addEventListener('click', () => {
+    navigator.clipboard.writeText(cmd);
+    code.title = 'Copied!';
+  });
+  wrap.append(code);
+  return wrap;
+}
+
+function showInstallInstructions() {
+  splashStatus.textContent = '';
+  document.querySelector('.splash-spinner').hidden = true;
+  splashError.hidden = false;
+  splashInstructions.textContent = '';
+
+  if (navigator.userAgent.includes('Windows')) {
+    splashInstructions.append(
+      mkInstTitle('Windows — pick one'),
+      mkInstCode('winget install yt-dlp', 'easiest'),
+      mkInstCode('scoop install yt-dlp'),
+    );
+  } else {
+    splashInstructions.append(
+      mkInstTitle('Linux — pick your distro'),
+      mkInstCode('sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && sudo chmod a+rx /usr/local/bin/yt-dlp', 'recommended — always the latest version'),
+      mkInstCode('sudo pacman -S yt-dlp', 'Arch / CachyOS'),
+      mkInstCode('sudo apt install yt-dlp', 'Debian / Ubuntu'),
+    );
+  }
+
+  const note = document.createElement('div');
+  note.className = 'inst-note';
+  note.textContent = 'Click a command to copy it, run it, then press Check again. Keep yt-dlp updated: yt-dlp -U';
+  splashInstructions.append(note);
+}
+
+async function bootSystemCheck() {
+  splashStatus.textContent = 'Checking system…';
+  try {
+    const res = await window.api.checkSystem();
+    if (res.ytdlpVersion) {
+      splashStatus.textContent = `Ready — yt-dlp ${res.ytdlpVersion}`;
+      if (!res.ffmpeg) {
+        splashStatus.textContent += ' · warning: ffmpeg not found, some features may be limited';
+      }
+      setTimeout(hideSplash, 700);
+    } else {
+      showInstallInstructions();
+    }
+  } catch {
+    showInstallInstructions();
+  }
+}
+
+$('splash-recheck').addEventListener('click', async () => {
+  splashError.hidden = true;
+  document.querySelector('.splash-spinner').hidden = false;
+  await bootSystemCheck();
+});
+$('splash-continue').addEventListener('click', hideSplash);
+
 // ---------- boot ----------
 applySettings();
 applyRail();
@@ -1232,3 +1357,4 @@ loadLiked();
 loadRecent();
 setView('home');
 refreshNpLike();
+bootSystemCheck();

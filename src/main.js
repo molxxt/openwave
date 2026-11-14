@@ -178,6 +178,23 @@ ipcMain.handle('app:openExternal', (_event, url) => {
 
 ipcMain.handle('trending:youtube', () => fetchTrending());
 
+// keep the window's background color in sync with the chosen theme (no startup flash)
+ipcMain.on('theme:background', (_event, theme) => {
+  if (mainWindow) {
+    mainWindow.setBackgroundColor(theme === 'light' ? '#f4f4f6' : '#121212');
+  }
+});
+
+// startup system check: is yt-dlp available? is ffmpeg?
+ipcMain.handle('system:check', () => new Promise((resolve) => {
+  execFile(YTDLP, ['--version'], { timeout: 15000 }, (err, stdout) => {
+    const ytdlpVersion = err ? null : String(stdout || '').trim() || null;
+    execFile('ffmpeg', ['-version'], { timeout: 15000 }, (err2) => {
+      resolve({ ytdlpVersion, ffmpeg: !err2 });
+    });
+  });
+}));
+
 // window controls for the frameless-style top bar buttons
 ipcMain.on('window:minimize', () => { if (mainWindow) mainWindow.minimize(); });
 ipcMain.on('window:close', () => { if (mainWindow) mainWindow.close(); });
