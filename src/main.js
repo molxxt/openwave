@@ -64,7 +64,16 @@ function ytdlp(args) {
 }
 
 /** Parse yt-dlp --flat-playlist --dump-json output into track objects. */
-function parseTracks(out) {
+/** Best thumbnail URL from a generic (non-YouTube) yt-dlp entry. */
+function pickThumb(entry) {
+  if (Array.isArray(entry.thumbnails) && entry.thumbnails.length) {
+    const usable = entry.thumbnails.filter(t => t && t.url);
+    return (usable[usable.length - 1] || usable[0]).url;
+  }
+  return entry.thumbnail || null;
+}
+
+function parseTracks(out, source = 'youtube') {
   const tracks = [];
   for (const line of out.split('\n')) {
     if (!line.trim()) continue;
@@ -73,25 +82,31 @@ function parseTracks(out) {
     if (!entry || !entry.id) continue;
     tracks.push({
       id: entry.id,
+      source,
       title: entry.title || 'Unknown title',
       channel: entry.uploader || entry.channel || 'Unknown channel',
       duration: entry.duration ?? null,
-      thumb: `https://i.ytimg.com/vi/${entry.id}/mqdefault.jpg`,
-      url: `https://www.youtube.com/watch?v=${entry.id}`,
+      thumb: source === 'youtube'
+        ? `https://i.ytimg.com/vi/${entry.id}/mqdefault.jpg`
+        : pickThumb(entry),
+      url: source === 'youtube'
+        ? `https://www.youtube.com/watch?v=${entry.id}`
+        : (entry.url || entry.webpage_url || null),
     });
   }
   return tracks;
 }
 
-/** Search YouTube. Returns a list of tracks. */
-async function searchYouTube(query) {
+/** Search YouTube or SoundCloud. Returns a list of tracks. */
+async function searchTracks(query, source = 'youtube') {
+  const prefix = source === 'soundcloud' ? 'scsearch15:' : 'ytsearch15:';
   const out = await ytdlp([
-    `ytsearch15:${query}`,
+    `${prefix}${query}`,
     '--flat-playlist',
     '--dump-json',
     '--no-warnings',
   ]);
-  return parseTracks(out);
+  return parseTracks(out, source);
 }
 
 // Trending feed, fetched once per session
@@ -108,11 +123,16 @@ async function fetchTrending() {
   return trendingCache;
 }
 
-/** Resolve a video id to a direct audio stream URL (best audio-only format). */
-async function resolveStreamUrl(videoId) {
-  const url = `https://www.youtube.com/watch?v=${videoId}`;
+/** Resolve a track to a direct audio stream URL (best audio-only format). */
+async function resolveStreamUrl(track) {
+  const isSc = track.source === 'soundcloud';
+  if (isSc && !track.url) throw new Error('This SoundCloud track is missing its link and cannot be played');
+  const url = isSc ? track.url : `https://www.youtube.com/watch?v=${track.id}`;
+  // SoundCloud serves some tracks as HLS (.m3u8) which <audio> can't play;
+  // prefer anything progressive, only fall back to HLS if nothing else exists.
+  const fmt = isSc ? 'bestaudio[protocol!^=m3u8]/bestaudio/best' : 'bestaudio/best';
   const out = await ytdlp([
-    '-f', 'bestaudio/best',
+    '-f', fmt,
     '--no-playlist',
     '--no-warnings',
     '-g', // print the direct media URL only
@@ -120,6 +140,9 @@ async function resolveStreamUrl(videoId) {
   ]);
   const streamUrl = out.split('\n').map(s => s.trim()).filter(Boolean).pop();
   if (!streamUrl) throw new Error('Could not resolve an audio stream for this track');
+  if (isSc && (/\.m3u8/i.test(streamUrl) || /format=hls/i.test(streamUrl))) {
+    throw new Error('This SoundCloud track is stream-only (HLS) and can\u2019t be played here — try another one');
+  }
   return streamUrl;
 }
 
@@ -185,13 +208,14 @@ function startProxyServer() {
 // IPC API exposed to the renderer (UI) process
 // ------------------------------------------------------------
 
-ipcMain.handle('search:youtube', async (_event, query) => {
-  return searchYouTube(String(query || '').trim());
+ipcMain.handle('search:tracks', async (_event, query, source) => {
+  return searchTracks(String(query || '').trim(), source === 'soundcloud' ? 'soundcloud' : 'youtube');
 });
 
 ipcMain.handle('stream:resolve', async (_event, track) => {
   if (!track || !track.id) throw new Error('no track id');
-  const streamUrl = await resolveStreamUrl(track.id);
+  if (!track.source) track.source = 'youtube'; // old persisted tracks predate sources
+  const streamUrl = await resolveStreamUrl(track);
   activeStreams.set(track.id, { url: streamUrl, title: track.title });
   return `http://127.0.0.1:${proxyPort}/stream/${encodeURIComponent(track.id)}`;
 });

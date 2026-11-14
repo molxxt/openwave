@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; style-src 'self'; img-src 'self' file: https://i.ytimg.com data:; media-src http://127.0.0.1:*; connect-src 'none'; script-src 'self'" />
+        content="default-src 'self'; style-src 'self'; img-src 'self' file: https://i.ytimg.com https://*.sndcdn.com data:; media-src http://127.0.0.1:*; connect-src 'none'; script-src 'self'" />
   <title>OpenWave</title>
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -24,7 +24,10 @@
       <div id="search-wrap">
         <svg class="ic" id="search-icon" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15zM16 16l5 5"/></svg>
         <input id="search-input" type="search"
-               placeholder="Search" autocomplete="off" autofocus />
+               placeholder="Search YouTube" autocomplete="off" autofocus />
+        <div id="source-toggle" title="Music source">
+          <button id="src-youtube" class="src-btn active" type="button">YT</button><button id="src-soundcloud" class="src-btn" type="button">SC</button>
+        </div>
         <div id="search-history" hidden></div>
       </div>
     </form>
@@ -164,6 +167,7 @@
       <div class="view-head">
         <div class="view-title">Queue <span id="queue-count" class="view-count"></span></div>
         <div class="view-actions">
+          <button id="queue-jump-btn">Jump to playing</button>
           <button id="queue-shuffle-btn">Shuffle</button>
           <button id="queue-save-btn">Save as playlist</button>
           <button id="clear-queue">Clear</button>
@@ -249,6 +253,8 @@
           <div class="set-row"><span>Like current song</span><kbd>L</kbd></div>
           <div class="set-row"><span>Cycle repeat mode</span><kbd>R</kbd></div>
           <div class="set-row"><span>Mute / unmute</span><kbd>M</kbd></div>
+          <div class="set-row"><span>Seek ±5 seconds</span><kbd>← →</kbd></div>
+          <div class="set-row"><span>Volume up / down</span><kbd>↑ ↓</kbd></div>
           <div class="set-row"><span>Close menus</span><kbd>Esc</kbd></div>
         </div>
 

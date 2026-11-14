@@ -3,7 +3,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
-  searchYouTube: (query) => ipcRenderer.invoke('search:youtube', query),
+  searchTracks: (query, source) => ipcRenderer.invoke('search:tracks', query, source),
   trendingYouTube: () => ipcRenderer.invoke('trending:youtube'),
   checkSystem: () => ipcRenderer.invoke('system:check'),
   checkUpdates: () => ipcRenderer.invoke('updates:check'),

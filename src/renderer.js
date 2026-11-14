@@ -364,6 +364,17 @@ function renderTrackList(container, tracks, opts) {
   });
 }
 
+// shimmer placeholder rows shown while a search is running
+function showSkeletons(container, count = 6) {
+  container.textContent = '';
+  for (let i = 0; i < count; i++) {
+    const li = document.createElement('li');
+    li.className = 'skeleton-row';
+    li.innerHTML = '<div class="sk-thumb"></div><div class="sk-lines"><div class="sk-line w60"></div><div class="sk-line w35"></div></div>';
+    container.append(li);
+  }
+}
+
 // friendly empty state instead of a blank list
 function emptyState(container, message) {
   const li = document.createElement('li');
@@ -521,6 +532,11 @@ async function ensureTrending() {
   if (trendingState === 'loading' || trendingState === 'done') return;
   const row = $('trending-cards');
   const status = $('trending-status');
+  if (musicSource === 'soundcloud') {
+    trendingState = 'done';
+    status.textContent = 'Trending is a YouTube feature — switch the source toggle (YT/SC) to see it.';
+    return;
+  }
   trendingState = 'loading';
   status.textContent = 'Loading trending…';
   try {
@@ -592,11 +608,12 @@ async function doSearch(q) {
   q = q.trim();
   if (!q) return;
 
-  resultsTitle.textContent = `Results for “${q}”`;
+  resultsTitle.textContent = `Results for “${q}” (${musicSource === 'soundcloud' ? 'SoundCloud' : 'YouTube'})`;
   resultsList.textContent = '';
+  showSkeletons(resultsList);
   setStatus('Searching…', true);
   try {
-    searchResults = await window.api.searchYouTube(q);
+    searchResults = await window.api.searchTracks(q, musicSource);
     setStatus('');
     if (!searchResults.length) setStatus('No results found.');
   } catch (err) {
@@ -693,12 +710,32 @@ function renderPlaylistsGrid() {
 
 // ---------- queue ----------
 function renderQueueView() {
-  queueCount.textContent = queue.length ? `· ${queue.length}` : '';
+  const total = queue.reduce((acc, t) => acc + (Number(t.duration) || 0), 0);
+  queueCount.textContent = queue.length
+    ? `· ${queue.length} ${queue.length === 1 ? 'track' : 'tracks'}${total ? ' · ' + fmtTotal(total) : ''}`
+    : '';
   renderTrackList(queueList, queue, { removable: true, reorderable: true });
   if (!queue.length) {
     emptyState(queueList, 'Your queue is empty — search for something, or load a playlist.');
   }
 }
+
+// total length like "1h 12m" / "43 min"
+function fmtTotal(sec) {
+  const h = Math.floor(sec / 3600);
+  const m = Math.round((sec % 3600) / 60);
+  return h ? `${h}h ${m}m` : `${m} min`;
+}
+
+// scroll the view to whatever is playing right now
+$('queue-jump-btn').addEventListener('click', () => {
+  if (!queue.length) { setStatus('Queue is empty.'); return; }
+  const row = queueList.querySelector('.track.playing') || queueList.querySelector('.track');
+  if (!row) return;
+  row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  row.classList.add('pulse');
+  setTimeout(() => row.classList.remove('pulse'), 1300);
+});
 
 // playback helpers
 function playTrack(track) {
@@ -1222,8 +1259,12 @@ async function playIndex(i, { startAt = null } = {}) {
 
   npTitle.textContent = track.title;
   npChannel.textContent = track.channel;
-  npThumb.onerror = () => { npThumb.src = track.thumb; npThumb.onerror = null; };
-  npThumb.src = `https://i.ytimg.com/vi/${track.id}/hqdefault.jpg`;
+  if (track.thumb) {
+    npThumb.onerror = () => { npThumb.onerror = null; };
+    npThumb.src = track.thumb;
+  } else {
+    npThumb.src = `https://i.ytimg.com/vi/${track.id}/hqdefault.jpg`;
+  }
   npThumb.hidden = false;
   document.title = `${track.title} · ${track.channel} — OpenWave`;
   btnPlay.innerHTML = icon('play');
@@ -1254,6 +1295,7 @@ function stopPlayback() {
   npThumb.classList.remove('playing');
   document.title = 'OpenWave';
   seek.value = 0;
+  seek.style.removeProperty('--buffered');
   timeCurrent.textContent = '0:00';
   timeTotal.textContent = '0:00';
   refreshNpLike();
@@ -1371,11 +1413,15 @@ btnNext.addEventListener('click', next);
 btnPrev.addEventListener('click', prev);
 
 audio.addEventListener('timeupdate', () => {
+  if (!isSeeking && isFinite(audio.duration)) {
+    seek.value = Math.round((audio.currentTime / audio.duration) * 1000);
+    updateRangeFill(seek);
+    timeCurrent.textContent = fmtTime(audio.currentTime);
+    updateTimeTotal();
+    updateBuffered();
+  }
+
   if (isSeeking || !isFinite(audio.duration)) return;
-  seek.value = Math.round((audio.currentTime / audio.duration) * 1000);
-  updateRangeFill(seek);
-  timeCurrent.textContent = fmtTime(audio.currentTime);
-  timeTotal.textContent = fmtTime(audio.duration);
 
   // remember playback position so the next launch resumes here (every ~5s)
   const now = Date.now();
@@ -1387,6 +1433,32 @@ audio.addEventListener('timeupdate', () => {
       duration: audio.duration || queue[current].duration || 0,
     }));
   }
+});
+
+// buffered-range indicator on the seek bar
+function updateBuffered() {
+  if (!isFinite(audio.duration) || !audio.buffered || !audio.buffered.length) return;
+  const end = audio.buffered.end(audio.buffered.length - 1);
+  seek.style.setProperty('--buffered', Math.min(100, (end / audio.duration) * 100) + '%');
+}
+audio.addEventListener('progress', updateBuffered);
+audio.addEventListener('loadedmetadata', updateBuffered);
+
+// click the total time to flip between total and remaining (-m:ss)
+let showRemaining = localStorage.getItem('openwave:timermode') === 'remaining';
+timeTotal.classList.add('clickable');
+timeTotal.title = 'Click to toggle remaining time';
+function updateTimeTotal() {
+  if (showRemaining && isFinite(audio.duration)) {
+    timeTotal.textContent = '-' + fmtTime(Math.max(0, audio.duration - audio.currentTime));
+  } else {
+    timeTotal.textContent = fmtTime(audio.duration);
+  }
+}
+timeTotal.addEventListener('click', () => {
+  showRemaining = !showRemaining;
+  localStorage.setItem('openwave:timermode', showRemaining ? 'remaining' : 'total');
+  updateTimeTotal();
 });
 
 // paint the filled portion of a slider via --fill (used by the track gradient)
@@ -1411,6 +1483,17 @@ volume.addEventListener('input', () => {
   updateRangeFill(volume);
   updateMuteIcon();
 });
+
+function nudgeVolume(delta) {
+  const v = Math.min(100, Math.max(0, Number(volume.value) + delta));
+  if (audio.muted && v > 0) audio.muted = false;
+  volume.value = v;
+  audio.volume = v / 100;
+  localStorage.setItem('openwave:volume', String(v));
+  updateRangeFill(volume);
+  updateMuteIcon();
+  setStatus(`Volume ${v}%`);
+}
 audio.volume = (Number(localStorage.getItem('openwave:volume')) || 80) / 100;
 volume.value = audio.volume * 100;
 updateRangeFill(volume);
@@ -1424,6 +1507,10 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'l') toggleLike(queue[current]);
   else if (e.key === 'r') btnRepeat.click();
   else if (e.key === 'm') btnMute.click();
+  else if (e.key === 'ArrowRight' && isFinite(audio.duration)) { e.preventDefault(); audio.currentTime = Math.min(audio.duration, audio.currentTime + 5); }
+  else if (e.key === 'ArrowLeft' && isFinite(audio.duration)) { e.preventDefault(); audio.currentTime = Math.max(0, audio.currentTime - 5); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); nudgeVolume(5); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); nudgeVolume(-5); }
 });
 
 // ---------- startup splash ----------
@@ -1522,6 +1609,20 @@ $('splash-recheck').addEventListener('click', async () => {
   await bootSystemCheck();
 });
 $('splash-continue').addEventListener('click', hideSplash);
+
+// ---------- music source (YouTube / SoundCloud) ----------
+let musicSource = localStorage.getItem('openwave:source') || 'youtube';
+
+function setSource(src) {
+  musicSource = src;
+  localStorage.setItem('openwave:source', src);
+  $('src-youtube').classList.toggle('active', src === 'youtube');
+  $('src-soundcloud').classList.toggle('active', src === 'soundcloud');
+  searchInput.placeholder = src === 'youtube' ? 'Search YouTube' : 'Search SoundCloud';
+}
+
+$('src-youtube').addEventListener('click', () => setSource('youtube'));
+$('src-soundcloud').addEventListener('click', () => setSource('soundcloud'));
 
 // ---------- backup export / import ----------
 function exportData() {
@@ -1636,6 +1737,7 @@ loadState();
 loadPlaylists();
 loadLiked();
 loadRecent();
+setSource(musicSource);
 setView('home');
 refreshNpLike();
 bootSystemCheck();
@@ -1647,7 +1749,7 @@ try {
     const track = queue[current];
     npTitle.textContent = track.title;
     npChannel.textContent = track.channel;
-    npThumb.src = `https://i.ytimg.com/vi/${track.id}/hqdefault.jpg`;
+    npThumb.src = track.thumb || `https://i.ytimg.com/vi/${track.id}/hqdefault.jpg`;
     npThumb.hidden = false;
     timeCurrent.textContent = fmtTime(r.position || 0);
     if (r.duration) {
