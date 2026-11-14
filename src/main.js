@@ -17,9 +17,10 @@ let mainWindow = null;
 let proxyServer = null;
 let proxyPort = null;
 
-// ------------------------------------------------------------
+// ----------------------------------------------------------
 // yt-dlp helpers
-// ------------------------------------------------------------
+// ----------------------------------------------------------
+const APP_REPO = 'molxxt/openwave'; // change if you rename the repo
 
 /** Run yt-dlp with the given arguments, return stdout as a string. */
 function ytdlp(args) {
@@ -177,6 +178,17 @@ ipcMain.handle('app:openExternal', (_event, url) => {
 });
 
 ipcMain.handle('trending:youtube', () => fetchTrending());
+
+// latest release from GitHub (update checker)
+ipcMain.handle('updates:check', async () => {
+  const res = await fetch(`https://api.github.com/repos/${APP_REPO}/releases/latest`, {
+    headers: { 'User-Agent': 'OpenWave-App' },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!res.ok) throw new Error(`GitHub responded with ${res.status}`);
+  const data = await res.json();
+  return { latest: data.tag_name, url: data.html_url, currentVersion: app.getVersion() };
+});
 
 // keep the window's background color in sync with the chosen theme (no startup flash)
 ipcMain.on('theme:background', (_event, theme) => {

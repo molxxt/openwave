@@ -229,6 +229,16 @@
           <div class="set-row"><span>Liked songs</span><button class="set-btn" data-clear="liked">Clear</button></div>
           <div class="set-row"><span>All playlists</span><button class="set-btn" data-clear="playlists">Delete all</button></div>
           <div class="set-row"><span>Everything (reset app)</span><button class="set-btn danger" data-clear="all">Reset</button></div>
+          <h3 class="h3-gap">Backup & restore</h3>
+          <div class="set-row">
+            <span>Export playlists, likes, history & settings</span>
+            <button class="set-btn" id="btn-export-data">Export</button>
+          </div>
+          <div class="set-row">
+            <span>Restore everything from a backup file</span>
+            <button class="set-btn" id="btn-import-data">Import</button>
+          </div>
+          <input type="file" id="import-file" accept=".json,application/json" hidden />
         </div>
 
         <div class="set-pane" id="pane-shortcuts" hidden>
@@ -257,6 +267,11 @@
           <p class="set-desc">Built with Electron and yt-dlp. No accounts, no ads, no telemetry — your playlists, likes and history never leave this computer.</p>
           <p class="set-desc">Distributed under the MIT license. If tracks stop playing, update yt-dlp: <code>sudo yt-dlp -U</code></p>
           <p class="set-desc">⚠️ Streaming from YouTube violates YouTube's Terms of Service. Personal use is a well-established gray area (same as other FOSS players) — don't sell or app-store this app.</p>
+          <h3 class="h3-gap">Updates</h3>
+          <div class="set-row">
+            <span id="updates-status">You're on v0.6.0</span>
+            <button class="set-btn" id="btn-updates">Check for updates</button>
+          </div>
         </div>
       </div>
     </section>

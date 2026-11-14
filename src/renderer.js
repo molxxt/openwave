@@ -68,6 +68,8 @@ const LIKED = 'Liked Songs';
 let queue = [];            // [{id, title, channel, duration, thumb, url}]
 let current = -1;
 let isSeeking = false;
+let pendingSeek = null; // position to jump to once audio metadata loads
+let lastResumeSave = 0;
 let playlists = [];        // [{name, tracks: [...]}]  (Liked Songs is virtual)
 let likedSongs = [];       // full track objects, most recent first
 let recentlyPlayed = [];   // full track objects, most recent first
@@ -1167,6 +1169,7 @@ clearQueueBtn.addEventListener('click', () => {
   stopPlayback();
   queue = [];
   current = -1;
+  localStorage.removeItem('openwave:resume');
   saveState();
   renderQueueView();
   highlightPlaying();
@@ -1204,11 +1207,16 @@ queueSaveForm.addEventListener('submit', (e) => {
   setStatus(`Playlist “${name}” saved.`);
 });
 
+function getResume() {
+  try { return JSON.parse(localStorage.getItem('openwave:resume')); } catch { return null; }
+}
+
 // ---------- playback ----------
-async function playIndex(i) {
+async function playIndex(i, { startAt = null } = {}) {
   if (i < 0 || i >= queue.length) return;
   const track = queue[i];
   current = i;
+  pendingSeek = startAt;
   saveState();
   pushRecent(track);
 
@@ -1252,7 +1260,14 @@ function stopPlayback() {
 }
 
 function togglePlay() {
-  if (!audio.src) return;
+  if (!audio.src) {
+    // resuming a saved session: resolve the stream and jump to the saved position
+    if (queue[current]) {
+      const r = getResume();
+      playIndex(current, { startAt: r && r.id === queue[current].id ? (r.position || 0) : null });
+    }
+    return;
+  }
   if (audio.paused) audio.play();
   else audio.pause();
 }
@@ -1315,6 +1330,13 @@ btnMute.addEventListener('click', () => {
 });
 updateMuteIcon();
 
+audio.addEventListener('loadedmetadata', () => {
+  if (pendingSeek != null && isFinite(audio.duration) && audio.duration > 0) {
+    try { audio.currentTime = Math.min(pendingSeek, Math.max(audio.duration - 1, 0)); } catch { /* ignore */ }
+    pendingSeek = null;
+  }
+});
+
 // stream URLs can expire between sessions — retry once with a fresh resolve
 audio.addEventListener('error', () => {
   const track = queue[current];
@@ -1353,6 +1375,17 @@ audio.addEventListener('timeupdate', () => {
   updateRangeFill(seek);
   timeCurrent.textContent = fmtTime(audio.currentTime);
   timeTotal.textContent = fmtTime(audio.duration);
+
+  // remember playback position so the next launch resumes here (every ~5s)
+  const now = Date.now();
+  if (queue[current] && now - lastResumeSave > 5000) {
+    lastResumeSave = now;
+    localStorage.setItem('openwave:resume', JSON.stringify({
+      id: queue[current].id,
+      position: audio.currentTime || 0,
+      duration: audio.duration || queue[current].duration || 0,
+    }));
+  }
 });
 
 // paint the filled portion of a slider via --fill (used by the track gradient)
@@ -1481,6 +1514,112 @@ $('splash-recheck').addEventListener('click', async () => {
 });
 $('splash-continue').addEventListener('click', hideSplash);
 
+// ---------- backup export / import ----------
+function exportData() {
+  const data = {
+    app: 'openwave',
+    exportedAt: new Date().toISOString(),
+    playlists,
+    likedSongs,
+    recentlyPlayed,
+    queue,
+    settings,
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `openwave-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  setStatus('Backup downloaded.');
+}
+
+function importData(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const d = JSON.parse(reader.result);
+      if (d.app !== 'openwave') throw new Error('this file is not an OpenWave backup');
+      if (Array.isArray(d.playlists)) {
+        playlists = d.playlists.filter(p => p && p.name && p.name !== LIKED && Array.isArray(p.tracks));
+        savePlaylists();
+      }
+      if (Array.isArray(d.likedSongs)) {
+        likedSongs = d.likedSongs.filter(t => t && t.id);
+        saveLiked();
+        refreshHearts();
+        refreshNpLike();
+      }
+      if (Array.isArray(d.recentlyPlayed)) {
+        recentlyPlayed = d.recentlyPlayed.filter(t => t && t.id);
+        saveRecent();
+      }
+      if (d.settings && typeof d.settings === 'object') {
+        settings = { ...SETTINGS_DEFAULTS, ...d.settings };
+        saveSettings();
+        applySettings();
+      }
+      if (Array.isArray(d.queue)) {
+        queue = d.queue.filter(t => t && t.id);
+        current = -1;
+        saveState();
+      }
+      renderView();
+      renderHomeTiles();
+      setStatus(`Imported ${playlists.length} playlists and ${likedSongs.length} liked songs.`);
+    } catch (err) {
+      setStatus(`Import failed: ${err.message}`);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ---------- update checker ----------
+let releaseUrl = null;
+
+function compareVersions(a, b) {
+  const pa = String(a).split('.').map(Number);
+  const pb = String(b).split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    const x = pa[i] || 0;
+    const y = pb[i] || 0;
+    if (x !== y) return x - y;
+  }
+  return 0;
+}
+
+async function checkUpdates() {
+  const statusEl = $('updates-status');
+  statusEl.textContent = 'Checking…';
+  try {
+    const res = await window.api.checkUpdates();
+    releaseUrl = res.url;
+    const cur = String(res.currentVersion).replace(/^v/, '');
+    const latest = String(res.latest || '').replace(/^v/, '');
+    if (compareVersions(latest, cur) > 0) {
+      statusEl.textContent = `Update available: ${res.latest} (you're on v${cur})`;
+      $('btn-updates').textContent = 'Open download page';
+    } else {
+      statusEl.textContent = `You're up to date (v${cur})`;
+    }
+  } catch {
+    statusEl.textContent = "Couldn't check — are you offline?";
+  }
+}
+
+$('btn-updates').addEventListener('click', () => {
+  if (releaseUrl) window.api.openExternal(releaseUrl);
+  else checkUpdates();
+});
+
+$('btn-export-data').addEventListener('click', exportData);
+$('btn-import-data').addEventListener('click', () => $('import-file').click());
+$('import-file').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) importData(file);
+  e.target.value = '';
+});
+
 // ---------- boot ----------
 applySettings();
 applyRail();
@@ -1491,3 +1630,22 @@ loadRecent();
 setView('home');
 refreshNpLike();
 bootSystemCheck();
+
+// resume last session: show the paused track and where it stopped
+try {
+  const r = getResume();
+  if (r && r.id && queue[current] && queue[current].id === r.id) {
+    const track = queue[current];
+    npTitle.textContent = track.title;
+    npChannel.textContent = track.channel;
+    npThumb.src = `https://i.ytimg.com/vi/${track.id}/hqdefault.jpg`;
+    npThumb.hidden = false;
+    timeCurrent.textContent = fmtTime(r.position || 0);
+    if (r.duration) {
+      timeTotal.textContent = fmtTime(r.duration);
+      seek.value = Math.round(((r.position || 0) / r.duration) * 1000);
+      updateRangeFill(seek);
+    }
+    setStatus('Paused where you left off — press Space to continue.');
+  }
+} catch { /* resume is best-effort */ }

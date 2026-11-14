@@ -1,6 +1,6 @@
 {
   "name": "openwave",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Free and open-source music player that streams from YouTube",
   "main": "src/main.js",
   "license": "MIT",
