@@ -240,6 +240,43 @@
       font-size: 12.5px; padding: 6px 14px; border-radius: 8px; cursor: pointer;
     }
     .mk-themes button.on { background: var(--accent); color: #121212; font-weight: 600; }
+
+    /* community card */
+    .community-card {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 28px 32px;
+      flex-wrap: wrap;
+    }
+    .cc-icon {
+      width: 54px;
+      height: 54px;
+      border-radius: 14px;
+      background: #5865f2;
+      color: #fff;
+      display: grid;
+      place-items: center;
+      flex: none;
+    }
+    .cc-icon svg { width: 30px; height: 30px; }
+    .cc-text { flex: 1; min-width: 240px; }
+    .cc-text h3 { font-size: 18px; margin-bottom: 4px; }
+    .cc-text p { font-size: 14px; color: var(--text-dim); }
+    .cc-btn {
+      background: #5865f2;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 14.5px;
+      flex: none;
+      transition: transform 0.12s, background 0.12s;
+    }
+    .cc-btn:hover { background: #4752c4; transform: translateY(-2px); text-decoration: none; }
     @media (max-width: 640px) { .mk-grid { grid-template-columns: 1fr; } .mk-ctrl span { display: none; } }
   </style>
 </head>
@@ -259,6 +296,7 @@
     <div class="links">
       <a href="#features">Features</a>
       <a href="#how">How it works</a>
+      <a href="#community">Community</a>
       <a href="https://github.com/molxxt/openwave">GitHub</a>
     </div>
   </nav>
@@ -352,6 +390,19 @@
       <div class="card" style="--ico:'🎨'"><h3>Make it yours</h3><p>Dark, OLED and light themes, three roundness presets, any accent color you like.</p></div>
       <div class="card" style="--ico:'🧬'"><h3>Zero setup</h3><p>yt-dlp ships inside the app. Download one file, press play. That's the whole install.</p></div>
       <div class="card" style="--ico:'🔒'"><h3>Yours, locally</h3><p>Playlists, likes and history never leave your computer. No accounts, no telemetry.</p></div>
+    </div>
+  </section>
+
+  <section id="community">
+    <div class="community-card">
+      <div class="cc-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M20.3 4.4A19.8 19.8 0 0 0 15.9 3l-.2.4c1.5.4 2.9 1 4.2 1.8a15.8 15.8 0 0 0-13.8 0C7.4 4.4 8.8 3.8 10.3 3.4L10.1 3a19.8 19.8 0 0 0-4.4 1.4C2.9 8.6 2.1 12.7 2.5 16.7a20 20 0 0 0 6 3l.5-.7c-.9-.3-1.7-.7-2.5-1.2l.6-.5a14.2 14.2 0 0 0 12.8 0l.6.5c-.8.5-1.6.9-2.5 1.2l.5.7c2.2-.7 4.2-1.7 6-3 .5-4.7-.7-8.7-3.3-12.3zM8.7 14.2c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4zm6.6 0c-1.2 0-2.2-1.1-2.2-2.4s1-2.4 2.2-2.4 2.2 1.1 2.2 2.4-1 2.4-2.2 2.4z"/></svg>
+      </div>
+      <div class="cc-text">
+        <h3>Join the community</h3>
+        <p>Report bugs, request features, show off your playlists and your color setups — and hear about new releases first.</p>
+      </div>
+      <a class="cc-btn" id="discord-link" href="https://discord.gg/your-invite-code" target="_blank" rel="noopener">Join the Discord</a>
     </div>
   </section>
 
