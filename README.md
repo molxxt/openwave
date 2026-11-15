@@ -18,11 +18,15 @@ No accounts · No ads · No subscriptions · No telemetry
 
 ## ✨ Screenshots
 
+![Expanded player](docs/screenshots/player.png)
+
+*The expanded player — big artwork, a live spectrum visualizer, and your queue right beside it.*
+
 | Home | Settings |
 |:---:|:---:|
 | ![Home](docs/screenshots/home.png) | ![Settings](docs/screenshots/settings.png) |
 
-Frosted glass interface with a live audio visualizer, themes (dark / OLED / light),
+Frosted glass interface, themes (dark / OLED / light),
 custom accent colors, and a floating player bar — all of it yours to tweak.
 
 ## 🎧 What it does
@@ -38,7 +42,7 @@ Your playlists, likes and history stay on your computer.
 - ❤️ **Liked songs & recommendations** — based on what you actually play
 - ⏯️ **Resume playback** — picks up where you left off, down to the second
 - ⌨️ **Keyboard first** — `Space` play/pause · `N`/`P` next/prev · `←`/`→` seek · `↑`/`↓` volume · `E` expanded player · `?` all shortcuts
-- 🌐 YouTube/SoundCloud source toggle · 🔔 Update checker
+- 🌙 Sleep timer ready · 🌐 YouTube/SoundCloud source toggle · 🔔 Update checker
 - 🎨 **Make it yours** — 3 themes, 3 roundness presets, custom accent color, collapsible sidebar
 
 ## ⬇️ Download
@@ -93,6 +97,7 @@ Don't distribute this app through app stores, and don't monetize it.
 
 <div align="center">
 
-Discord community — *https://discord.gg/GzGhSKrcku*
+Made with 🌊 and questionable taste in memes.
+Discord community — *coming soon.*
 
 </div>
