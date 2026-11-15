@@ -13,8 +13,8 @@
   --text-dim: #9d9d9d;
   --border: #2a2a2a;
   --danger: #ff6b6b;
-  /* frosted glass for floating surfaces */
-  --glass: rgba(18, 18, 18, 0.68);
+  /* frosted glass for floating surfaces — a lighter version of the bg, like the panels */
+  --glass: rgba(26, 26, 26, 0.72);
   --glass-blur: blur(22px) saturate(1.35);
 }
 
@@ -24,7 +24,7 @@
   --bg-raised: #ffffff;
   --bg-hover: #e9e9ec;
   --bg-buffered: #d5d5dc;
-  --glass: rgba(244, 244, 246, 0.68);
+  --glass: rgba(255, 255, 255, 0.78);
   --text: #1d1d1f;
   --text-dim: #6e6e73;
   --border: #e2e2e6;
@@ -38,7 +38,7 @@
   --border: #232323;
   --text: #e9e8ee;
   --text-dim: #8f8d99;
-  --glass: rgba(0, 0, 0, 0.8);
+  --glass: rgba(10, 10, 10, 0.8);
 }
 
 /* white-on-gray needs a touch of depth in light mode */
@@ -105,7 +105,15 @@ body.rail-expanded { --rail-w: 232px; }
 
 /* ---------- top bar ---------- */
 #topbar {
-  grid-area: topbar;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  z-index: 25;
+  background: var(--glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   display: grid;
   grid-template-columns: var(--rail-w) 1fr auto;
   align-items: center;
@@ -263,8 +271,14 @@ body.rail-expanded { --rail-w: 232px; }
 
 /* ---------- icon rail ---------- */
 #rail {
-  grid-area: rail;
-  background: var(--bg-raised);
+  position: fixed;
+  top: 64px;
+  bottom: 0;
+  left: 0;
+  width: var(--rail-w);
+  background: var(--glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -272,7 +286,7 @@ body.rail-expanded { --rail-w: 232px; }
   gap: 10px;
   padding: 16px 0;
   z-index: 20;
-  transition: padding 0.25s ease;
+  transition: width 0.25s ease, padding 0.25s ease;
 }
 
 .rail-btn {
@@ -322,7 +336,8 @@ body.rail-expanded #rail-expand .ic { transform: scaleX(-1); }
 #content {
   grid-area: content;
   overflow-y: auto;
-  padding: 20px 24px 124px; /* extra bottom room: the player bar floats over the list */
+  /* the grid already starts content below the 64px topbar — this is just seam spacing */
+  padding: 10px 24px 124px;
 }
 
 #status {
@@ -1427,4 +1442,33 @@ input[type="range"]:focus-visible,
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
+}
+
+/* home greeting */
+#home-greet { padding: 0 4px 16px; }
+.greet-hi { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; }
+.greet-sub { margin-top: 4px; color: var(--text-dim); font-size: 13px; }
+
+/* spinner while a track's stream is resolving */
+.track.loading .eq { display: grid; align-items: initial; }
+.track.loading .eq i { display: none; }
+.track.loading .eq {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spinC 0.8s linear infinite;
+}
+@keyframes spinC {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* like button pop */
+#btn-like.pop { animation: pop 0.3s ease; }
+@keyframes pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.35); }
+  100% { transform: scale(1); }
 }

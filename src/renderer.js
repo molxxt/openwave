@@ -459,6 +459,11 @@ function recTracks() {
 }
 
 function renderHomeTiles() {
+  // greeting header
+  const h = new Date().getHours();
+  $('greet-hi').textContent = h < 5 ? 'Good night' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  $('greet-sub').textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+
   // recommendations pills
   tileRecsPills.textContent = '';
   const recs = recTracks();
@@ -1257,6 +1262,10 @@ async function playIndex(i, { startAt = null } = {}) {
   saveState();
   pushRecent(track);
 
+  // spinner on the row while the stream resolves
+  const loadingRow = document.querySelector(`.track[data-id="${CSS.escape(track.id)}"]`);
+  if (loadingRow) loadingRow.classList.add('loading');
+
   npTitle.textContent = track.title;
   npChannel.textContent = track.channel;
   if (track.thumb) {
@@ -1272,10 +1281,14 @@ async function playIndex(i, { startAt = null } = {}) {
 
   try {
     const localUrl = await window.api.resolveStream(track);
+    const loadingRow = document.querySelector(`.track[data-id="${CSS.escape(track.id)}"]`);
+    if (loadingRow) loadingRow.classList.remove('loading');
     audio.src = localUrl;
     audio.play();
     setStatus('');
   } catch (err) {
+    const loadingRow = document.querySelector(`.track[data-id="${CSS.escape(track.id)}"]`);
+    if (loadingRow) loadingRow.classList.remove('loading');
     setStatus(`Couldn't play “${track.title}”: ${err.message}`);
     btnPlay.innerHTML = icon('play');
   }
@@ -1407,7 +1420,12 @@ function removeAt(i) {
 }
 
 // ---------- player bar interactions ----------
-btnLike.addEventListener('click', () => toggleLike(queue[current]));
+btnLike.addEventListener('click', () => {
+  toggleLike(queue[current]);
+  btnLike.classList.remove('pop');
+  void btnLike.offsetWidth; // restart the animation
+  btnLike.classList.add('pop');
+});
 btnPlay.addEventListener('click', togglePlay);
 btnNext.addEventListener('click', next);
 btnPrev.addEventListener('click', prev);
