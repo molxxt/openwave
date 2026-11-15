@@ -133,6 +133,111 @@
       font-size: 13px;
     }
     footer .legal { max-width: 640px; margin: 12px auto 0; font-size: 12px; line-height: 1.55; }
+
+    /* interactive mockup */
+    .mk {
+      --acc: #a5a6f6;
+      --mk-bg: #121212;
+      --mk-raised: #1a1a1a;
+      --mk-border: #2a2a2a;
+      --mk-text: #e9e8ee;
+      --mk-dim: #9d9d9d;
+      display: grid;
+      grid-template-columns: 62px 1fr;
+      width: min(780px, 100%);
+      margin: 0 auto;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--mk-bg);
+      color: var(--mk-text);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+      transition: --acc 0.2s;
+    }
+    .mk[data-theme="oled"] { --mk-bg: #000000; --mk-raised: #0a0a0a; }
+    .mk[data-theme="light"] { --mk-bg: #f4f4f6; --mk-raised: #ffffff; --mk-border: #e2e2e6; --mk-text: #1d1d1f; --mk-dim: #6e6e73; }
+    .mk-rail {
+      background: var(--mk-raised);
+      border-right: 1px solid var(--mk-border);
+      display: flex; flex-direction: column; align-items: center;
+      gap: 10px; padding: 12px 0;
+    }
+    .mk-logo { width: 22px; height: 22px; border-radius: 50%; background: var(--acc); margin-bottom: 6px; }
+    .mk-nav {
+      width: 38px; height: 38px; border-radius: 10px;
+      display: grid; place-items: center;
+      color: var(--mk-dim); font-size: 15px;
+    }
+    .mk-nav.active { background: var(--acc); color: var(--mk-bg); }
+    .mk-flex { flex: 1; }
+    .mk-main { display: flex; flex-direction: column; min-width: 0; }
+    .mk-top { padding: 12px 16px; border-bottom: 1px solid var(--mk-border); }
+    .mk-search {
+      background: var(--mk-raised); border: 1px solid var(--mk-border);
+      border-radius: 20px; padding: 8px 12px; font-size: 13px; color: var(--mk-dim);
+      display: flex; align-items: center; gap: 8px; width: min(100%, 340px);
+    }
+    .mk-seg { margin-left: auto; display: flex; background: var(--mk-bg); border: 1px solid var(--mk-border); border-radius: 13px; padding: 2px; }
+    .mk-seg i { font-style: normal; font-size: 10px; padding: 2px 8px; border-radius: 11px; color: var(--mk-dim); }
+    .mk-seg i.on { background: var(--acc); color: var(--mk-bg); font-weight: 700; }
+    .mk-body { padding: 18px 20px; flex: 1; }
+    .mk-greet { font-size: 20px; font-weight: 700; margin-bottom: 14px; }
+    .mk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .mk-tile {
+      background: var(--mk-raised); border: 1px solid var(--mk-border);
+      border-radius: 12px; padding: 14px;
+      display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center;
+    }
+    .mk-tico {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: var(--acc); color: var(--mk-bg);
+      display: grid; place-items: center; font-size: 15px;
+    }
+    .mk-tile b { font-size: 13px; display: block; }
+    .mk-tile small { font-size: 11px; color: var(--mk-dim); }
+    .mk-pill { grid-column: 1 / -1; height: 10px; border-radius: 6px; background: var(--mk-bg); border: 1px solid var(--mk-border); width: 70%; }
+    .mk-bar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 16px; border-top: 1px solid var(--mk-border);
+      background: var(--mk-raised);
+    }
+    .mk-thumb { width: 42px; height: 42px; border-radius: 8px; background: var(--acc); opacity: 0.85; flex: none; }
+    .mk-np { min-width: 0; }
+    .mk-np b { font-size: 12px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mk-np small { font-size: 10px; color: var(--mk-dim); }
+    .mk-ctrl { display: flex; align-items: center; gap: 8px; color: var(--mk-dim); font-size: 13px; }
+    .mk-play {
+      font-style: normal; width: 34px; height: 34px; border-radius: 50%;
+      background: var(--acc); color: var(--mk-bg);
+      display: grid; place-items: center; font-size: 11px;
+    }
+    .mk-time { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 10px; color: var(--mk-dim); }
+    .mk-seek { width: 110px; height: 4px; border-radius: 2px; background: var(--mk-border); overflow: hidden; }
+    .mk-fill { width: 8%; height: 100%; background: var(--acc); }
+    .mk-panel {
+      display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+      justify-content: center; margin-top: 22px;
+    }
+    .mk-swatches { display: flex; gap: 10px; flex-wrap: wrap; }
+    .mk-swatches button {
+      width: 34px; height: 34px; border-radius: 50%;
+      border: 2px solid transparent; cursor: pointer;
+      transition: transform 0.12s;
+    }
+    .mk-swatches button:hover { transform: scale(1.15); }
+    .mk-swatches button.on { border-color: var(--text); box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--text); }
+    .mk-custom {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 13px; color: var(--text-dim); cursor: pointer;
+    }
+    .mk-custom input { width: 34px; height: 34px; border: none; border-radius: 50%; background: none; cursor: pointer; padding: 0; }
+    .mk-themes { display: flex; background: var(--bg-raised); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
+    .mk-themes button {
+      border: none; background: none; color: var(--text-dim);
+      font-size: 12.5px; padding: 6px 14px; border-radius: 8px; cursor: pointer;
+    }
+    .mk-themes button.on { background: var(--accent); color: #121212; font-weight: 600; }
+    @media (max-width: 640px) { .mk-grid { grid-template-columns: 1fr; } .mk-ctrl span { display: none; } }
   </style>
 </head>
 <body>
@@ -179,12 +284,56 @@
     </div>
   </div>
 
-  <section id="shots">
-    <h2>Made to be looked at</h2>
-    <p class="lead">Frosted glass, a live spectrum visualizer, themes and accent colors — flat and calm, no gradient circus.</p>
-    <div class="shots">
-      <img src="docs/screenshots/home.png" alt="OpenWave home screen" loading="lazy" />
-      <img src="docs/screenshots/settings.png" alt="OpenWave appearance settings" loading="lazy" />
+  <section id="try">
+    <h2>Try it right here</h2>
+    <p class="lead">This is a live mockup of the actual interface. Pick an accent — everything colored follows it, exactly like in the app. Themes too.</p>
+
+    <div class="mk" id="mk" data-theme="dark">
+      <div class="mk-rail">
+        <div class="mk-logo"></div>
+        <div class="mk-nav active">⌂</div>
+        <div class="mk-nav">♥</div>
+        <div class="mk-nav">≡</div>
+        <div class="mk-nav">▦</div>
+        <div class="mk-flex"></div>
+        <div class="mk-nav">⚙</div>
+      </div>
+      <div class="mk-main">
+        <div class="mk-top">
+          <div class="mk-search">🔍 Search YouTube <span class="mk-seg"><i class="on">YT</i><i>SC</i></span></div>
+        </div>
+        <div class="mk-body">
+          <div class="mk-greet">Good afternoon</div>
+          <div class="mk-grid">
+            <div class="mk-tile">
+              <div class="mk-tico">♪</div>
+              <div><b>Recommendations</b><small>Based on what you play</small></div>
+              <div class="mk-pill"></div>
+            </div>
+            <div class="mk-tile">
+              <div class="mk-tico">♥</div>
+              <div><b>Liked Songs</b><small>12 songs</small></div>
+              <div class="mk-pill"></div>
+            </div>
+          </div>
+        </div>
+        <div class="mk-bar">
+          <div class="mk-thumb"></div>
+          <div class="mk-np"><b>Skanija — Psihoaktiv Trip</b><small>PsihoaktivTripTV</small></div>
+          <div class="mk-ctrl"><span>♥</span><span>⏮</span><i class="mk-play">▶</i><span>⏭</span></div>
+          <div class="mk-time">0:20 <div class="mk-seek"><div class="mk-fill"></div></div> 4:19</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mk-panel">
+      <div class="mk-swatches" id="mk-swatches"></div>
+      <label class="mk-custom">Custom <input type="color" id="mk-custom" value="#a5a6f6" /></label>
+      <div class="mk-themes">
+        <button data-t="dark" class="on">Dark</button>
+        <button data-t="oled">OLED</button>
+        <button data-t="light">Light</button>
+      </div>
     </div>
   </section>
 
@@ -253,6 +402,43 @@
       osEl.textContent = os;
       main.href = base + asset;
     }
+  </script>
+
+  <script>
+    // interactive accent + theme demo — same mechanism as the app (CSS variables)
+    (function () {
+      const mk = document.getElementById('mk');
+      const presets = ['#a5a6f6', '#8fd3f6', '#8fe3b0', '#f6a5c0', '#f6c46b', '#f68c6b'];
+      const row = document.getElementById('mk-swatches');
+      let custom = null;
+
+      function apply(color) {
+        mk.style.setProperty('--acc', color);
+        for (const b of row.children) {
+          b.classList.toggle('on', !custom && b.dataset.c === color);
+        }
+      }
+      presets.forEach((c) => {
+        const b = document.createElement('button');
+        b.style.background = c;
+        b.dataset.c = c;
+        b.title = c;
+        b.addEventListener('click', () => { custom = null; apply(c); });
+        row.append(b);
+      });
+      apply('#a5a6f6');
+
+      document.getElementById('mk-custom').addEventListener('input', (e) => {
+        custom = e.target.value;
+        apply(custom);
+      });
+
+      const themes = document.querySelectorAll('.mk-themes button');
+      themes.forEach((b) => b.addEventListener('click', () => {
+        mk.dataset.theme = b.dataset.t;
+        themes.forEach((x) => x.classList.toggle('on', x === b));
+      }));
+    })();
   </script>
 </body>
 </html>
