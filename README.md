@@ -38,7 +38,7 @@ Your playlists, likes and history stay on your computer.
 - ❤️ **Liked songs & recommendations** — based on what you actually play
 - ⏯️ **Resume playback** — picks up where you left off, down to the second
 - ⌨️ **Keyboard first** — `Space` play/pause · `N`/`P` next/prev · `←`/`→` seek · `↑`/`↓` volume · `E` expanded player · `?` all shortcuts
-- 🌙 Sleep timer ready · 🌐 YouTube/SoundCloud source toggle · 🔔 Update checker
+- 🌐 YouTube/SoundCloud source toggle · 🔔 Update checker
 - 🎨 **Make it yours** — 3 themes, 3 roundness presets, custom accent color, collapsible sidebar
 
 ## ⬇️ Download
