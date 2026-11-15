@@ -186,6 +186,8 @@ function startProxyServer() {
           for (const h of ['content-type', 'content-length', 'content-range', 'accept-ranges']) {
             if (ures.headers[h]) pass[h] = ures.headers[h];
           }
+          // CORS: lets the renderer attach a Web Audio analyser to the stream
+          pass['Access-Control-Allow-Origin'] = '*';
           res.writeHead(ures.statusCode, pass);
           ures.pipe(res);
         });

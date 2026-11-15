@@ -77,6 +77,7 @@ let searchResults = [];    // last search result list
 let view = { type: 'home', name: null };
 
 const audio = new Audio();
+audio.crossOrigin = 'anonymous'; // lets the Web Audio analyser tap the proxy stream
 
 // ---------- monochrome SVG icons ----------
 const ICONS = {
@@ -251,6 +252,11 @@ function refreshNpLike() {
   const liked = track ? isLiked(track.id) : false;
   btnLike.classList.toggle('liked', liked);
   btnLike.innerHTML = icon(liked ? 'heart' : 'heartO');
+  const npxLike = $('npx-like');
+  if (npxLike) {
+    npxLike.classList.toggle('liked', liked);
+    npxLike.innerHTML = icon(liked ? 'heart' : 'heartO');
+  }
 }
 
 // ---------- generic track row builder ----------
@@ -1145,6 +1151,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closeCtxMenu();
     if (!plEditOverlay.hidden) closePlaylistEditor();
+    if (typeof npExpand !== 'undefined' && !npExpand.hidden) closeNpExpand();
   }
 });
 window.addEventListener('blur', closeCtxMenu);
@@ -1364,6 +1371,7 @@ async function playIndex(i, { startAt = null } = {}) {
     audio.src = localUrl;
     audio.play();
     setStatus('');
+    if (!npExpand.hidden) fillNpExpand();
   } catch (err) {
     const loadingRow = document.querySelector(`.track[data-id="${CSS.escape(track.id)}"]`);
     if (loadingRow) loadingRow.classList.remove('loading');
@@ -1415,10 +1423,16 @@ function prev() {
 audio.addEventListener('play', () => {
   btnPlay.innerHTML = icon('pause');
   npThumb.classList.add('playing');
+  const npxPlay = $('npx-play');
+  if (npxPlay) npxPlay.innerHTML = icon('pause');
+  if (!audioCtx) ensureAnalyser();
+  audioCtx?.resume?.();
 });
 audio.addEventListener('pause', () => {
   btnPlay.innerHTML = icon('play');
   npThumb.classList.remove('playing');
+  const npxPlay = $('npx-play');
+  if (npxPlay) npxPlay.innerHTML = icon('play');
 });
 audio.addEventListener('ended', () => {
   if (repeatMode === 'one') {
@@ -1515,6 +1529,13 @@ audio.addEventListener('timeupdate', () => {
     timeCurrent.textContent = fmtTime(audio.currentTime);
     updateTimeTotal();
     updateBuffered();
+    if (!npExpand.hidden && !npxSeeking) {
+      const ns = $('npx-seek');
+      ns.value = Math.round((audio.currentTime / audio.duration) * 1000);
+      updateRangeFill(ns);
+      $('npx-t-cur').textContent = fmtTime(audio.currentTime);
+      $('npx-t-total').textContent = fmtTime(audio.duration);
+    }
   }
 
   if (isSeeking || !isFinite(audio.duration)) return;
@@ -1608,6 +1629,102 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'ArrowUp') { e.preventDefault(); nudgeVolume(5); }
   else if (e.key === 'ArrowDown') { e.preventDefault(); nudgeVolume(-5); }
 });
+
+// ---------- expanded now playing + audio visualizer ----------
+const npExpand = $('np-expand');
+let npxSeeking = false;
+
+function openNpExpand() {
+  const track = queue[current];
+  if (!track) { setStatus('Play something first.'); return; }
+  fillNpExpand();
+  npExpand.hidden = false;
+  startViz();
+}
+
+function fillNpExpand() {
+  const track = queue[current];
+  if (!track) return;
+  $('npx-title').textContent = track.title;
+  $('npx-channel').textContent = track.channel;
+  $('npx-thumb').src = track.thumb || `https://i.ytimg.com/vi/${track.id}/hqdefault.jpg`;
+  $('npx-play').innerHTML = icon(audio.paused ? 'play' : 'pause');
+  refreshNpLike();
+  renderNpxQueue();
+}
+
+function renderNpxQueue() {
+  renderTrackList($('npx-queue-list'), queue, { removable: true });
+}
+
+function closeNpExpand() {
+  npExpand.hidden = true;
+  stopViz();
+}
+
+$('np-thumb').addEventListener('click', openNpExpand);
+$('npx-close').addEventListener('click', closeNpExpand);
+$('npx-play').addEventListener('click', togglePlay);
+$('npx-prev').addEventListener('click', prev);
+$('npx-next').addEventListener('click', next);
+$('npx-like').addEventListener('click', () => toggleLike(queue[current]));
+
+$('npx-seek').addEventListener('input', () => { npxSeeking = true; updateRangeFill($('npx-seek')); });
+$('npx-seek').addEventListener('change', () => {
+  if (isFinite(audio.duration)) audio.currentTime = ($('npx-seek').value / 1000) * audio.duration;
+  npxSeeking = false;
+  updateRangeFill($('npx-seek'));
+});
+
+// visualizer: a Web Audio analyser taps the localhost proxy stream
+let audioCtx = null, analyser = null, vizData = null, vizRaf = 0;
+function ensureAnalyser() {
+  if (audioCtx) { audioCtx.resume?.(); return true; }
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = audioCtx.createMediaElementSource(audio);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.82;
+    src.connect(analyser);
+    analyser.connect(audioCtx.destination);
+    vizData = new Uint8Array(analyser.frequencyBinCount);
+    return true;
+  } catch { return false; }
+}
+
+function startViz() {
+  if (!audioCtx) ensureAnalyser();
+  audioCtx?.resume?.();
+  cancelAnimationFrame(vizRaf);
+  drawViz();
+}
+function stopViz() { cancelAnimationFrame(vizRaf); vizRaf = 0; }
+
+function drawViz() {
+  const c = $('viz');
+  if (!c || npExpand.hidden) return;
+  if (analyser) analyser.getByteFrequencyData(vizData);
+  const w = c.clientWidth, h = c.clientHeight, dpr = window.devicePixelRatio || 1;
+  if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) {
+    c.width = Math.round(w * dpr);
+    c.height = Math.round(h * dpr);
+  }
+  const g = c.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+  g.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#a5a6f6';
+  const barCount = 56, gap = 3;
+  const bw = Math.max(2, (w - gap * (barCount - 1)) / barCount);
+  const bins = analyser ? analyser.frequencyBinCount : 0;
+  for (let i = 0; i < barCount; i++) {
+    const bin = bins ? Math.min(bins - 1, Math.floor(Math.pow(i / barCount, 1.6) * bins * 0.75)) : 0;
+    const v = analyser ? vizData[bin] / 255 : 0.03;
+    const bh = Math.max(2, v * (h - 2));
+    g.fillRect(i * (bw + gap), h - bh, bw, bh);
+  }
+  vizRaf = requestAnimationFrame(drawViz);
+}
 
 // ---------- startup splash ----------
 const splash = $('splash');
