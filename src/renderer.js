@@ -2008,7 +2008,13 @@ function importData(file) {
   reader.readAsText(file);
 }
 
-// ---------- update checker ----------
+// show the real app version on the About page
+window.api.getVersion().then((v) => {
+  const el = $('about-version');
+  if (el) el.textContent = `v${v}`;
+});
+
+// ---------- update checker (manual, About page) ----------
 let releaseUrl = null;
 
 function compareVersions(a, b) {
@@ -2024,15 +2030,17 @@ function compareVersions(a, b) {
 
 async function checkUpdates() {
   const statusEl = $('updates-status');
+  const btn = $('btn-updates');
   statusEl.textContent = 'Checking…';
   try {
     const res = await window.api.checkUpdates();
-    releaseUrl = res.url;
     const cur = String(res.currentVersion).replace(/^v/, '');
     const latest = String(res.latest || '').replace(/^v/, '');
     if (compareVersions(latest, cur) > 0) {
-      statusEl.textContent = `Update available: ${res.latest} (you're on v${cur})`;
-      $('btn-updates').textContent = 'Open download page';
+      releaseUrl = res.url; // links to the release's download page on GitHub
+      statusEl.textContent = `Update available: ${res.latest} — you're on v${cur}`;
+      btn.textContent = 'Open download page';
+      btn.classList.add('btn-accent');
     } else {
       statusEl.textContent = `You're up to date (v${cur})`;
     }

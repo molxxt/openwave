@@ -19,7 +19,6 @@ let proxyPort = null;
 // ----------------------------------------------------------
 // yt-dlp helpers
 // ----------------------------------------------------------
-const APP_REPO = 'molxxt/openwave'; // change if you rename the repo
 
 // yt-dlp resolution: prefer a binary bundled with the app (extraResources),
 // fall back to whatever the OS provides. Bundling means users install nothing.
@@ -269,15 +268,22 @@ ipcMain.handle('app:openExternal', (_event, url) => {
 
 ipcMain.handle('trending:youtube', () => fetchTrending());
 
-// latest release from GitHub (update checker)
+ipcMain.handle('app:version', () => app.getVersion());
+
+// update check: latest GitHub release vs running version (repo is public)
+const GITHUB_REPO = 'molxxt/openwave';
 ipcMain.handle('updates:check', async () => {
-  const res = await fetch(`https://api.github.com/repos/${APP_REPO}/releases/latest`, {
+  const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
     headers: { 'User-Agent': 'OpenWave-App' },
     signal: AbortSignal.timeout(10000),
   });
   if (!res.ok) throw new Error(`GitHub responded with ${res.status}`);
   const data = await res.json();
-  return { latest: data.tag_name, url: data.html_url, currentVersion: app.getVersion() };
+  return {
+    latest: data.tag_name,
+    url: data.html_url || `https://github.com/${GITHUB_REPO}`,
+    currentVersion: app.getVersion(),
+  };
 });
 
 // keep the window's background color in sync with the chosen theme (no startup flash)

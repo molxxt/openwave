@@ -22,15 +22,27 @@
       "package.json"
     ],
     "extraResources": [
-      { "from": "build/yt-dlp.exe", "to": "yt-dlp.exe" },
-      { "from": "build/yt-dlp-linux", "to": "yt-dlp-linux" }
+      {
+        "from": "build/yt-dlp.exe",
+        "to": "yt-dlp.exe"
+      },
+      {
+        "from": "build/yt-dlp-linux",
+        "to": "yt-dlp-linux"
+      }
     ],
     "linux": {
-      "target": ["AppImage", "tar.gz"],
+      "target": [
+        "AppImage",
+        "tar.gz"
+      ],
       "category": "Audio"
     },
     "win": {
-      "target": ["portable", "nsis"]
+      "target": [
+        "portable",
+        "nsis"
+      ]
     }
   }
 }
