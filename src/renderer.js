@@ -383,6 +383,59 @@ function showSkeletons(container, count = 6) {
   }
 }
 
+// “continue where you left off” hero card on home
+function renderResumeHero() {
+  const hero = $('resume-hero');
+  const r = getResume();
+  let track = null;
+  if (r && r.id) {
+    track = queue.find(t => t.id === r.id)
+      || recentlyPlayed.find(t => t.id === r.id)
+      || likedSongs.find(t => t.id === r.id);
+  }
+  // hide while that very track is actively playing (you haven't “left off”)
+  if (!track || (queue[current]?.id === track.id && !audio.paused)) {
+    hero.hidden = true;
+    return;
+  }
+  hero.hidden = false;
+  hero.textContent = '';
+
+  const img = document.createElement('img');
+  img.src = track.thumb;
+  img.alt = '';
+
+  const info = document.createElement('div');
+  info.className = 'rh-info';
+  const label = document.createElement('div');
+  label.className = 'rh-label';
+  label.textContent = 'Continue where you left off';
+  const title = document.createElement('div');
+  title.className = 'rh-title';
+  title.textContent = trunc(track.title, 60);
+  const sub = document.createElement('div');
+  sub.className = 'rh-sub';
+  sub.textContent = `${trunc(track.channel, 40)} · paused at ${fmtTime(r.position || 0)}`;
+  info.append(label, title, sub);
+
+  const btn = document.createElement('button');
+  btn.className = 'btn-accent';
+  btn.innerHTML = `${icon('play')}Resume`;
+  btn.addEventListener('click', () => {
+    let i = queue.findIndex(t => t.id === track.id);
+    if (i === -1) { queue.push({ ...track }); i = queue.length - 1; saveState(); }
+    playIndex(i, { startAt: r.position || 0 });
+    hero.hidden = true;
+    setView('queue');
+  });
+
+  hero.append(img, info, btn);
+}
+
+// re-render the hero when playback state changes (it reacts to pause/play)
+audio.addEventListener('pause', () => { if (view.type === 'home') renderHomeTiles(); });
+audio.addEventListener('play', () => { if (view.type === 'home') renderHomeTiles(); });
+
 // friendly empty state instead of a blank list
 function emptyState(container, message) {
   const li = document.createElement('li');
@@ -467,6 +520,8 @@ function recTracks() {
 }
 
 function renderHomeTiles() {
+  renderResumeHero();
+
   // greeting header
   const h = new Date().getHours();
   $('greet-hi').textContent = h < 5 ? 'Good night' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
@@ -583,6 +638,18 @@ for (const btn of document.querySelectorAll('.rail-btn[data-view]')) {
 // ---------- search ----------
 function hideSearchHistory() { searchHistoryBox.hidden = true; }
 
+// the dropdown is a body-level fixed element (so its blur isn't clipped by the
+// topbar's own backdrop-filter) — place it under the search pill ourselves
+function positionSearchHistory() {
+  const rect = $('search-wrap').getBoundingClientRect();
+  searchHistoryBox.style.left = rect.left + 'px';
+  searchHistoryBox.style.top = (rect.bottom + 8) + 'px';
+  searchHistoryBox.style.width = rect.width + 'px';
+}
+window.addEventListener('resize', () => {
+  if (!searchHistoryBox.hidden) positionSearchHistory();
+});
+
 function renderSearchHistory() {
   if (!searchInput.matches(':focus')) { hideSearchHistory(); return; }
   const q = searchInput.value.trim().toLowerCase();
@@ -615,6 +682,7 @@ function renderSearchHistory() {
     hideSearchHistory();
   });
   searchHistoryBox.append(clear);
+  positionSearchHistory();
   searchHistoryBox.hidden = false;
 }
 
@@ -1152,6 +1220,7 @@ document.addEventListener('keydown', (e) => {
     closeCtxMenu();
     if (!plEditOverlay.hidden) closePlaylistEditor();
     if (typeof npExpand !== 'undefined' && !npExpand.hidden) closeNpExpand();
+    $('kbd-overlay').hidden = true;
   }
 });
 window.addEventListener('blur', closeCtxMenu);
@@ -1584,14 +1653,33 @@ function updateRangeFill(input) {
   input.style.setProperty('--fill', pct + '%');
 }
 
-seek.addEventListener('input', () => { isSeeking = true; updateRangeFill(seek); });
-seek.addEventListener('change', () => {
+seek.addEventListener('input', () => { isSeeking = true; updateRangeFill(seek); });seek.addEventListener('change', () => {
   if (isFinite(audio.duration)) {
     audio.currentTime = (seek.value / 1000) * audio.duration;
   }
   isSeeking = false;
   updateRangeFill(seek);
 });
+
+// hover the seek bar for a time preview at the cursor
+function attachSeekPreview(input) {
+  const tip = document.createElement('div');
+  tip.className = 'seek-tip';
+  tip.hidden = true;
+  document.body.append(tip);
+  input.addEventListener('mousemove', (e) => {
+    if (!isFinite(audio.duration)) { tip.hidden = true; return; }
+    const rect = input.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    tip.textContent = fmtTime(ratio * audio.duration);
+    tip.style.left = Math.round(e.clientX) + 'px';
+    tip.style.top = Math.round(rect.top - 34) + 'px';
+    tip.hidden = false;
+  });
+  input.addEventListener('mouseleave', () => { tip.hidden = true; });
+}
+attachSeekPreview(seek);
+attachSeekPreview($('npx-seek'));
 
 volume.addEventListener('input', () => {
   if (audio.muted && volume.value > 0) audio.muted = false; // moving the slider unmutes
@@ -1624,10 +1712,16 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'l') toggleLike(queue[current]);
   else if (e.key === 'r') btnRepeat.click();
   else if (e.key === 'm') btnMute.click();
+  else if (e.key === 'e') openNpExpand();
+  else if (e.key === '?') { const k = $('kbd-overlay'); k.hidden = !k.hidden; }
   else if (e.key === 'ArrowRight' && isFinite(audio.duration)) { e.preventDefault(); audio.currentTime = Math.min(audio.duration, audio.currentTime + 5); }
   else if (e.key === 'ArrowLeft' && isFinite(audio.duration)) { e.preventDefault(); audio.currentTime = Math.max(0, audio.currentTime - 5); }
   else if (e.key === 'ArrowUp') { e.preventDefault(); nudgeVolume(5); }
   else if (e.key === 'ArrowDown') { e.preventDefault(); nudgeVolume(-5); }
+});
+
+$('kbd-overlay').addEventListener('click', (e) => {
+  if (e.target === $('kbd-overlay')) $('kbd-overlay').hidden = true;
 });
 
 // ---------- expanded now playing + audio visualizer ----------

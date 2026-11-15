@@ -28,7 +28,6 @@
         <div id="source-toggle" title="Music source">
           <button id="src-youtube" class="src-btn active" type="button">YT</button><button id="src-soundcloud" class="src-btn" type="button">SC</button>
         </div>
-        <div id="search-history" hidden></div>
       </div>
     </form>
     <div id="topbar-actions">
@@ -79,6 +78,7 @@
         <div class="greet-hi" id="greet-hi">Good evening</div>
         <div class="greet-sub" id="greet-sub"></div>
       </div>
+      <div id="resume-hero" hidden></div>
       <div class="home-panel">
         <div class="tiles">
           <button class="tile" data-tile="foryou">
@@ -276,6 +276,8 @@
           <div class="set-row"><span>Like current song</span><kbd>L</kbd></div>
           <div class="set-row"><span>Cycle repeat mode</span><kbd>R</kbd></div>
           <div class="set-row"><span>Mute / unmute</span><kbd>M</kbd></div>
+          <div class="set-row"><span>Open expanded player</span><kbd>E</kbd></div>
+          <div class="set-row"><span>Shortcuts overlay</span><kbd>?</kbd></div>
           <div class="set-row"><span>Seek ±5 seconds</span><kbd>← →</kbd></div>
           <div class="set-row"><span>Volume up / down</span><kbd>↑ ↓</kbd></div>
           <div class="set-row"><span>Close menus</span><kbd>Esc</kbd></div>
@@ -400,6 +402,7 @@
   </div>
 
   <div id="ctxmenu" hidden></div>
+  <div id="search-history" hidden></div>
 
   <!-- expanded now playing -->
   <div id="np-expand" hidden>
@@ -427,6 +430,29 @@
       <div class="npx-queue">
         <div class="npx-queue-title">Up next</div>
         <ul id="npx-queue-list"></ul>
+      </div>
+    </div>
+  </div>
+
+  <div id="kbd-overlay" hidden>
+    <div class="kbd-card">
+      <div class="kbd-head">Keyboard shortcuts</div>
+      <div class="kbd-cols">
+        <div>
+          <div class="kbd-row"><span>Play / pause</span><kbd>Space</kbd></div>
+          <div class="kbd-row"><span>Next song</span><kbd>N</kbd></div>
+          <div class="kbd-row"><span>Previous song</span><kbd>P</kbd></div>
+          <div class="kbd-row"><span>Like current song</span><kbd>L</kbd></div>
+          <div class="kbd-row"><span>Cycle repeat mode</span><kbd>R</kbd></div>
+          <div class="kbd-row"><span>Mute / unmute</span><kbd>M</kbd></div>
+        </div>
+        <div>
+          <div class="kbd-row"><span>Seek ±5 seconds</span><kbd>← →</kbd></div>
+          <div class="kbd-row"><span>Volume up / down</span><kbd>↑ ↓</kbd></div>
+          <div class="kbd-row"><span>Open expanded player</span><kbd>E</kbd></div>
+          <div class="kbd-row"><span>This overlay</span><kbd>?</kbd></div>
+          <div class="kbd-row"><span>Close menus</span><kbd>Esc</kbd></div>
+        </div>
       </div>
     </div>
   </div>
