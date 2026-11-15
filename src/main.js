@@ -273,12 +273,22 @@ ipcMain.handle('app:version', () => app.getVersion());
 // update check: latest GitHub release vs running version (repo is public)
 const GITHUB_REPO = 'molxxt/openwave';
 ipcMain.handle('updates:check', async () => {
-  const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
+  // first verify the repo exists and is public (a 404 here means private/missing)
+  const repoRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}`, {
     headers: { 'User-Agent': 'OpenWave-App' },
     signal: AbortSignal.timeout(10000),
   });
-  if (!res.ok) throw new Error(`GitHub responded with ${res.status}`);
-  const data = await res.json();
+  if (!repoRes.ok) throw new Error('repo-not-found');
+
+  // /releases/latest 404s when the repo has zero published releases
+  const relRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
+    headers: { 'User-Agent': 'OpenWave-App' },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!relRes.ok) {
+    return { latest: null, url: `https://github.com/${GITHUB_REPO}/releases`, currentVersion: app.getVersion() };
+  }
+  const data = await relRes.json();
   return {
     latest: data.tag_name,
     url: data.html_url || `https://github.com/${GITHUB_REPO}`,

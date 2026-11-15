@@ -2035,6 +2035,10 @@ async function checkUpdates() {
   try {
     const res = await window.api.checkUpdates();
     const cur = String(res.currentVersion).replace(/^v/, '');
+    if (res.latest == null) {
+      statusEl.textContent = "No release published yet — you're on the dev build.";
+      return;
+    }
     const latest = String(res.latest || '').replace(/^v/, '');
     if (compareVersions(latest, cur) > 0) {
       releaseUrl = res.url; // links to the release's download page on GitHub
@@ -2044,8 +2048,10 @@ async function checkUpdates() {
     } else {
       statusEl.textContent = `You're up to date (v${cur})`;
     }
-  } catch {
-    statusEl.textContent = "Couldn't check — are you offline?";
+  } catch (err) {
+    statusEl.textContent = String(err?.message).includes('repo-not-found')
+      ? 'Repo not found — is it public and named molxxt/openwave?'
+      : "Couldn't check — are you offline?";
   }
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "openwave",
-  "version": "0.7.0",
+  "version": "0.9.0",
   "description": "Free and open-source music player that streams from YouTube",
   "main": "src/main.js",
   "license": "MIT",
@@ -21,28 +21,23 @@
       "src/**/*",
       "package.json"
     ],
+    "artifactName": "OpenWave.${ext}",
     "extraResources": [
-      {
-        "from": "build/yt-dlp.exe",
-        "to": "yt-dlp.exe"
-      },
-      {
-        "from": "build/yt-dlp-linux",
-        "to": "yt-dlp-linux"
-      }
+      { "from": "build/yt-dlp.exe", "to": "yt-dlp.exe" },
+      { "from": "build/yt-dlp-linux", "to": "yt-dlp-linux" }
     ],
     "linux": {
-      "target": [
-        "AppImage",
-        "tar.gz"
-      ],
+      "target": ["AppImage", "tar.gz"],
       "category": "Audio"
     },
     "win": {
-      "target": [
-        "portable",
-        "nsis"
-      ]
+      "target": ["portable", "nsis"]
+    },
+    "portable": {
+      "artifactName": "OpenWave-Portable.${ext}"
+    },
+    "nsis": {
+      "artifactName": "OpenWave-Setup.${ext}"
     }
   }
 }

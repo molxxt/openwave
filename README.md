@@ -1,79 +1,99 @@
+<div align="center">
+
+<img src="src/assets/logo.svg" width="72" alt="OpenWave logo" />
+
 # OpenWave 🌊
 
-A free and open-source desktop music player for Linux that streams from **YouTube**.
-Built with **Electron** + **yt-dlp**. No accounts, no ads, no subscriptions.
+**Free, open-source music player for desktop. Streams from YouTube and SoundCloud.**
 
-> ⚠️ **Legal note:** streaming from YouTube violates YouTube's Terms of Service
-> (though personal use is not illegal in most places). Don't distribute this app
-> through app stores and don't monetize it. It's a personal-use FOSS project.
+No accounts · No ads · No subscriptions · No telemetry
 
-## Features (v0.1)
+[![Latest release](https://img.shields.io/badge/release-v0.9.0-2ea44f)](https://github.com/molxxt/openwave/releases)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-lightgrey)](#download)
 
-- 🔍 Search YouTube and stream the best available audio
-- ⏯️ Player bar: play/pause, previous/next, seek, volume
-- 🎵 Queue (reorderable by re-clicking, removable tracks)
-- 💾 Queue persists between sessions
-- ⌨️ Shortcuts: `Space` = play/pause, `N` = next, `P` = previous
+</div>
 
-## Setup (Linux)
+---
 
-### 1. Install Node.js
+## ✨ Screenshots
 
-Download from <https://nodejs.org> (LTS is fine), or via your package manager:
+| Home | Settings |
+|:---:|:---:|
+| ![Home](docs/screenshots/home.png) | ![Settings](docs/screenshots/settings.png) |
+
+Frosted glass interface with a live audio visualizer, themes (dark / OLED / light),
+custom accent colors, and a floating player bar — all of it yours to tweak.
+
+## 🎧 What it does
+
+OpenWave is a desktop music player built with **Electron** and powered by
+**[yt-dlp](https://github.com/yt-dlp/yt-dlp)**. Search for anything on YouTube or
+SoundCloud and stream the audio instantly — no accounts, no ads, no tracking.
+Your playlists, likes and history stay on your computer.
+
+- 🔍 **Search YouTube & SoundCloud** — one click to switch sources
+- 🖥️ **Expanded player** — big artwork, live spectrum visualizer, your queue beside it
+- 📋 **Playlists & queue** — drag & drop from search, drag to reorder, persistent everywhere
+- ❤️ **Liked songs & recommendations** — based on what you actually play
+- ⏯️ **Resume playback** — picks up where you left off, down to the second
+- ⌨️ **Keyboard first** — `Space` play/pause · `N`/`P` next/prev · `←`/`→` seek · `↑`/`↓` volume · `E` expanded player · `?` all shortcuts
+- 🌙 Sleep timer ready · 🌐 YouTube/SoundCloud source toggle · 🔔 Update checker
+- 🎨 **Make it yours** — 3 themes, 3 roundness presets, custom accent color, collapsible sidebar
+
+## ⬇️ Download
+
+Grab the latest build from the
+[**Releases page**](https://github.com/molxxt/openwave/releases):
+
+| File | Platform |
+|:---|:---|
+| `OpenWave.AppImage` | Linux — download, `chmod +x`, run |
+| `OpenWave.tar.gz` | Linux — archive |
+| `OpenWave-Setup.exe` | Windows — recommended, installs like a normal app |
+| `OpenWave-Portable.exe` | Windows — no install, just run it |
+
+**No setup required.** yt-dlp ships bundled with the app — install nothing.
+
+> **Windows note:** OpenWave isn't code-signed (signing costs money), so
+> SmartScreen may warn on first run — click *More info → Run anyway*.
+
+> **Linux note:** a bundled yt-dlp ships with the app, but if playback ever
+> breaks, updating your system copy helps too: `sudo yt-dlp -U`
+
+## 🔨 Build from source
 
 ```bash
-# Debian/Ubuntu
-sudo apt install nodejs npm
-# Fedora
-sudo dnf install nodejs npm
-# Arch
-sudo pacman -S nodejs npm
-```
-
-### 2. Install yt-dlp
-
-OpenWave uses [yt-dlp](https://github.com/yt-dlp/yt-dlp) to search YouTube and
-extract audio streams. You also need `ffmpeg` (usually preinstalled).
-
-```bash
-# Option A: download the standalone binary (recommended)
-sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
-sudo chmod a+rx /usr/local/bin/yt-dlp
-
-# Option B: via pip
-python3 -m pip install yt-dlp
-```
-
-Keep yt-dlp updated — YouTube changes things often and yt-dlp fixes it quickly:
-
-```bash
-sudo yt-dlp -U   # standalone binary
-```
-
-### 3. Install & run OpenWave
-
-```bash
+git clone https://github.com/molxxt/openwave
+cd openwave
 npm install
-npm start
+npm start        # run in dev
+npm run dist     # build AppImage / tar.gz / Windows exes
 ```
 
-## Project layout
+Requires Node.js (LTS) and `ffmpeg` on the system. Building also pulls the
+latest yt-dlp binaries into `build/` via CI, or fetch them manually:
 
-```
-src/main.js      Electron main process: window, yt-dlp calls, local stream proxy
-src/preload.js   Security bridge exposing a tiny API to the UI
-src/index.html   UI layout
-src/style.css    Dark theme
-src/renderer.js  UI logic: search, queue, playback
+```bash
+curl -fL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux -o build/yt-dlp-linux
+chmod +x build/yt-dlp-linux
 ```
 
-## Roadmap ideas
+## ⚠️ Legal note
 
-- SoundCloud support
-- Favorites / playlists (local SQLite)
-- Media key support (MPRIS on Linux)
-- A "shuffle that doesn't suck"
+Streaming from YouTube violates YouTube's Terms of Service. Personal use is a
+well-established gray area — the same one every other FOSS media player lives in.
+Don't distribute this app through app stores, and don't monetize it.
 
-## License
+## 📜 License
 
-MIT — see [LICENSE](LICENSE).
+[MIT](LICENSE) — do whatever you want, just keep the license notice.
+
+---
+
+<div align="center">
+
+Made with 🌊 and questionable taste in memes.
+Discord community — *coming soon.*
+
+</div>
