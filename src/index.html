@@ -49,6 +49,7 @@
     <button class="rail-btn" data-view="liked" title="Liked Songs">
       <svg class="ic" viewBox="0 0 24 24"><path d="M12 21.1l-1.6-1.44C5.2 14.9 2 12 2 8.5 2 5.4 4.4 3 7.5 3c1.9 0 3.6 1 4.5 2.5C12.9 4 14.6 3 16.5 3 19.6 3 22 5.4 22 8.5c0 3.5-3.2 6.4-8.4 11.16L12 21.1z"/></svg>
       <span class="rail-label">Liked Songs</span>
+      <span class="rail-badge" id="rail-liked-badge"></span>
     </button>
     <button class="rail-btn" data-view="playlists" title="Playlists">
       <svg class="ic" viewBox="0 0 24 24"><rect x="3.5" y="5.4" width="13.5" height="2.5" rx="1.25"/><rect x="3.5" y="10.75" width="13.5" height="2.5" rx="1.25"/><rect x="3.5" y="16.1" width="9" height="2.5" rx="1.25"/><path d="M18.6 12.4v6.7c0 .77.85 1.24 1.5.83l4.5-2.85a.98.98 0 0 0 0-1.66l-4.5-2.85c-.65-.41-1.5.06-1.5.83z"/></svg>
@@ -57,7 +58,10 @@
     <button class="rail-btn" data-view="queue" title="Queue">
       <svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5.4" width="10.5" height="2.5" rx="1.25"/><rect x="3" y="10.75" width="10.5" height="2.5" rx="1.25"/><rect x="3" y="16.1" width="7" height="2.5" rx="1.25"/><path d="M16.2 5.6v11.9c0 .77.85 1.24 1.5.83l4.5-2.85a.98.98 0 0 0 0-1.66l-4.5-2.85c-.65-.41-1.5.06-1.5.83z" transform="translate(-1 1)"/></svg>
       <span class="rail-label">Queue</span>
+      <span class="rail-badge" id="rail-queue-badge"></span>
     </button>
+    <div class="rail-sep"></div>
+    <div id="rail-playlists"></div>
     <div class="rail-spacer"></div>
     <button class="rail-btn small" id="rail-expand" title="Expand sidebar">
       <svg class="ic" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M7 17l5-5-5-5M14 17l5-5-5-5"/></svg>

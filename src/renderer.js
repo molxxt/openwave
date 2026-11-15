@@ -101,6 +101,7 @@ function icon(name) {
 // ---------- persistence ----------
 function saveState() {
   localStorage.setItem('openwave:state', JSON.stringify({ queue, current }));
+  updateRailBadges();
 }
 function loadState() {
   try {
@@ -113,6 +114,7 @@ function loadState() {
 }
 function savePlaylists() {
   localStorage.setItem('openwave:playlists', JSON.stringify(playlists));
+  renderRailPlaylists();
 }
 function loadPlaylists() {
   try {
@@ -122,6 +124,7 @@ function loadPlaylists() {
 }
 function saveLiked() {
   localStorage.setItem('openwave:liked', JSON.stringify(likedSongs));
+  updateRailBadges();
 }
 function loadLiked() {
   try {
@@ -367,8 +370,12 @@ function moveInQueue(from, to) {
 
 function renderTrackList(container, tracks, opts) {
   container.textContent = '';
+  const stagger = staggerNextList; // only on view switches, not every state change
+  staggerNextList = false;
   tracks.forEach((track, i) => {
-    container.append(trackEl(track, () => playTrack(track), { ...opts, index: i }));
+    const el = trackEl(track, () => playTrack(track), { ...opts, index: i });
+    if (stagger) el.style.setProperty('--d', Math.min(i * 0.03, 0.3) + 's');
+    container.append(el);
   });
 }
 
@@ -451,6 +458,7 @@ function emptyState(container, message) {
 
 // ---------- views ----------
 // which rail button lights up for each view
+let staggerNextList = false;
 const NAV_MAP = {
   home: 'home', results: 'home', foryou: 'home', playlist: 'playlists',
   playlists: 'playlists', liked: 'liked', queue: 'queue', settings: 'settings',
@@ -458,6 +466,7 @@ const NAV_MAP = {
 
 function setView(type, name = null) {
   view = { type, name };
+  staggerNextList = true;
   for (const el of document.querySelectorAll('.view')) el.hidden = true;
   $(`view-${type}`).hidden = false;
   for (const el of document.querySelectorAll('.rail-btn[data-view]')) {
@@ -467,6 +476,7 @@ function setView(type, name = null) {
 }
 
 function renderView() {
+  renderRailPlaylists();
   if (view.type === 'home') renderHomeTiles();
   else if (view.type === 'results') renderResultsView();
   else if (view.type === 'foryou') renderForYouView();
@@ -561,9 +571,10 @@ function renderHomeTiles() {
 }
 
 // small wide cards for horizontal home rows
-function mediaCard(track) {
+function mediaCard(track, index = 0) {
   const card = document.createElement('button');
   card.className = 'media-card';
+  card.style.setProperty('--d', Math.min(index * 0.04, 0.36) + 's');
   card.draggable = true;
   card.addEventListener('dragstart', (e) => {
     e.dataTransfer.effectAllowed = 'copy';
@@ -597,7 +608,7 @@ function renderRecentCards() {
     row.append(div);
     return;
   }
-  for (const t of recentlyPlayed.slice(0, 10)) row.append(mediaCard(t));
+  recentlyPlayed.slice(0, 10).forEach((t, i) => row.append(mediaCard(t, i)));
 }
 
 let trendingState = 'idle'; // idle | loading | done | failed
@@ -617,7 +628,7 @@ async function ensureTrending() {
     trendingState = 'done';
     status.textContent = '';
     row.textContent = '';
-    for (const t of tracks) row.append(mediaCard(t));
+    tracks.forEach((t, i) => row.append(mediaCard(t, i)));
   } catch {
     trendingState = 'failed';
     row.textContent = '';
@@ -1948,6 +1959,48 @@ function setSource(src) {
 $('src-youtube').addEventListener('click', () => setSource('youtube'));
 $('src-soundcloud').addEventListener('click', () => setSource('soundcloud'));
 
+// ---------- sidebar: count badges + recent playlists (drop targets) ----------
+function updateRailBadges() {
+  const q = $('rail-queue-badge');
+  if (q) q.textContent = queue.length ? (queue.length > 99 ? '99+' : queue.length) : '';
+  const l = $('rail-liked-badge');
+  if (l) l.textContent = likedSongs.length ? (likedSongs.length > 99 ? '99+' : likedSongs.length) : '';
+}
+
+function renderRailPlaylists() {
+  const box = $('rail-playlists');
+  if (!box) return;
+  box.textContent = '';
+  for (const pl of playlists.slice(0, 5)) {
+    const b = document.createElement('button');
+    b.className = 'rail-pl' + (view.type === 'playlist' && view.name === pl.name ? ' active' : '');
+    b.textContent = trunc(pl.name, 22);
+    b.title = `${pl.name} — ${pl.tracks.length} song${pl.tracks.length === 1 ? '' : 's'}`;
+    b.addEventListener('click', () => setView('playlist', pl.name));
+    b.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      b.classList.add('drop-ready');
+    });
+    b.addEventListener('dragleave', () => b.classList.remove('drop-ready'));
+    b.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      b.classList.remove('drop-ready');
+      const track = parseTrackDrag(e);
+      if (track) addTrackToPlaylist(pl, track);
+    });
+    box.append(b);
+  }
+  if (playlists.length > 5) {
+    const more = document.createElement('button');
+    more.className = 'rail-pl';
+    more.textContent = `… ${playlists.length - 5} more`;
+    more.addEventListener('click', () => setView('playlists'));
+    box.append(more);
+  }
+}
+
 // ---------- backup export / import ----------
 function exportData() {
   const data = {
@@ -2075,6 +2128,7 @@ loadState();
 loadPlaylists();
 loadLiked();
 loadRecent();
+updateRailBadges();
 setSource(musicSource);
 setView('home');
 refreshNpLike();
