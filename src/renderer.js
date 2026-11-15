@@ -254,7 +254,7 @@ function refreshNpLike() {
 }
 
 // ---------- generic track row builder ----------
-function trackEl(track, onClick, { removable = false, reorderable = false, index = 0 } = {}) {
+function trackEl(track, onClick, { removable = false, reorderable = false, index = 0, onReorder = null } = {}) {
   const li = document.createElement('li');
   li.className = 'track' + (queue[current]?.id === track.id ? ' playing' : '');
   li.dataset.id = track.id;
@@ -315,14 +315,16 @@ function trackEl(track, onClick, { removable = false, reorderable = false, index
     openCtxMenu(e.clientX, e.clientY, track);
   });
 
-  // drag-to-reorder (queue only)
+  // every row is a drag source: drop it on a playlist card (or the Liked rail
+  // icon) to add it. Queue rows additionally carry their index for reordering.
+  li.draggable = true;
+  li.addEventListener('dragstart', (e) => {
+    e.dataTransfer.effectAllowed = 'copyMove';
+    e.dataTransfer.setData('text/openwave-track', JSON.stringify(track));
+    if (reorderable) e.dataTransfer.setData('text/openwave-index', String(index));
+    li.classList.add('dragging');
+  });
   if (reorderable) {
-    li.draggable = true;
-    li.addEventListener('dragstart', (e) => {
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', String(index));
-      li.classList.add('dragging');
-    });
     li.addEventListener('dragover', (e) => {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
@@ -333,14 +335,14 @@ function trackEl(track, onClick, { removable = false, reorderable = false, index
       e.preventDefault();
       e.stopPropagation();
       li.classList.remove('drag-over');
-      const from = parseInt(e.dataTransfer.getData('text/plain'), 10);
-      if (!isNaN(from) && from !== index) moveInQueue(from, index);
-    });
-    li.addEventListener('dragend', () => {
-      li.classList.remove('dragging');
-      document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+      const from = parseInt(e.dataTransfer.getData('text/openwave-index'), 10);
+      if (!isNaN(from) && from !== index) (onReorder || moveInQueue)(from, index);
     });
   }
+  li.addEventListener('dragend', () => {
+    li.classList.remove('dragging');
+    document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+  });
   return li;
 }
 
@@ -501,6 +503,11 @@ function renderHomeTiles() {
 function mediaCard(track) {
   const card = document.createElement('button');
   card.className = 'media-card';
+  card.draggable = true;
+  card.addEventListener('dragstart', (e) => {
+    e.dataTransfer.effectAllowed = 'copy';
+    e.dataTransfer.setData('text/openwave-track', JSON.stringify(track));
+  });
   const img = document.createElement('img');
   img.src = track.thumb;
   img.loading = 'lazy';
@@ -708,9 +715,70 @@ function renderPlaylistsGrid() {
       e.preventDefault();
       openPlaylistCtxMenu(e.clientX, e.clientY, pl);
     });
+    // drop target: drag any song from search / queue / liked onto a card
+    card.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      card.classList.add('drop-ready');
+    });
+    card.addEventListener('dragleave', () => card.classList.remove('drop-ready'));
+    card.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      card.classList.remove('drop-ready');
+      const track = parseTrackDrag(e);
+      if (track) addTrackToPlaylist(pl, track);
+    });
     card.append(art, name, count);
     playlistsGrid.append(card);
   }
+}
+
+function parseTrackDrag(e) {
+  try { return JSON.parse(e.dataTransfer.getData('text/openwave-track')); } catch { return null; }
+}
+
+function addTrackToPlaylist(pl, track) {
+  if (pl.tracks.some(t => t.id === track.id)) {
+    setStatus(`“${trunc(track.title, 30)}” is already in ${pl.name}.`);
+    return;
+  }
+  pl.tracks.push({ ...track });
+  savePlaylists();
+  if (view.type === 'playlists') renderPlaylistsGrid();
+  if (view.type === 'playlist' && view.name === pl.name) renderPlaylistView();
+  setStatus(`Added “${trunc(track.title, 30)}” to ${pl.name}.`);
+}
+
+// drag a song over a rail destination: it highlights, navigates after a short
+// hover, and accepts the drop (playlists view → drop on a card; liked → instant like)
+for (const { el, dest } of [
+  { el: document.querySelector('.rail-btn[data-view="playlists"]'), dest: 'playlists' },
+  { el: document.querySelector('.rail-btn[data-view="liked"]'), dest: 'liked' },
+]) {
+  if (!el) continue;
+  let navTimer = null;
+  el.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    el.classList.add('drop-ready');
+    if (!navTimer && view.type !== dest) navTimer = setTimeout(() => { setView(dest); navTimer = null; }, 450);
+  });
+  el.addEventListener('dragleave', () => el.classList.remove('drop-ready'));
+  el.addEventListener('dragend', () => { el.classList.remove('drop-ready'); });
+  el.addEventListener('drop', (e) => {
+    e.preventDefault();
+    el.classList.remove('drop-ready');
+    if (navTimer) { clearTimeout(navTimer); navTimer = null; }
+    const track = parseTrackDrag(e);
+    if (!track) return;
+    if (dest === 'liked') {
+      if (!isLiked(track.id)) { toggleLike(track); setStatus(`Added “${trunc(track.title, 30)}” to ${LIKED}.`); }
+      else setStatus(`“${trunc(track.title, 30)}” is already in ${LIKED}.`);
+    } else {
+      setStatus('Now drop it on a playlist card below.');
+    }
+  });
 }
 
 // ---------- queue ----------
@@ -1183,7 +1251,17 @@ function renderPlaylistView() {
   if (!pl) { setView('home'); return; }
   plTitle.textContent = pl.name;
   plCount.textContent = pl.tracks.length ? `· ${pl.tracks.length}` : '';
-  renderTrackList(playlistViewList, pl.tracks.map(t => ({ ...t })), {});
+  renderTrackList(playlistViewList, pl.tracks.map(t => ({ ...t })), {
+    reorderable: true,
+    onReorder: (from, to) => {
+      const target = playlists.find(p => p.name === view.name);
+      if (!target) return;
+      const [moved] = target.tracks.splice(from, 1);
+      target.tracks.splice(to, 0, moved);
+      savePlaylists();
+      renderPlaylistView();
+    },
+  });
 }
 
 $('pl-playall').addEventListener('click', () => {

@@ -1472,3 +1472,89 @@ input[type="range"]:focus-visible,
   50% { transform: scale(1.35); }
   100% { transform: scale(1); }
 }
+
+/* ---------- drag & drop feedback ---------- */
+.track.dragging { opacity: 0.4; }
+.track.drag-over { box-shadow: inset 0 2px 0 var(--accent); }
+.media-card.dragging { opacity: 0.4; }
+.pl-card.drop-ready,
+.rail-btn.drop-ready {
+  outline: 2px dashed var(--accent);
+  outline-offset: 3px;
+  color: var(--accent);
+}
+.rail-btn.drop-ready .ic { color: var(--accent); }
+
+/* ---------- settings glow-up ---------- */
+.set-pane {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 24px;
+}
+.set-pane h3 {
+  font-size: 16px;
+  letter-spacing: -0.01em;
+  margin: 6px 0 4px;
+}
+.h3-gap { margin-top: 28px; }
+.set-desc { color: var(--text-dim); font-size: 13px; margin: 0 0 14px; }
+.settings-nav .set-row,
+.set-pane .set-row {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+}
+.settings-nav .set-nav.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* live appearance preview — pure CSS vars, updates instantly with theme/roundness/accent */
+#settings-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 26px;
+}
+.sp-row { display: flex; align-items: center; gap: 12px; }
+.sp-art {
+  width: 46px; height: 46px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.sp-art .ic { width: 20px; height: 20px; }
+.sp-lines { flex: 1; min-width: 0; }
+.sp-t { font-size: 13px; font-weight: 600; }
+.sp-s { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+.sp-btns { display: flex; gap: 6px; }
+.sp-btn { width: 26px; height: 26px; border-radius: 50%; background: var(--bg-hover); }
+.sp-btn.sp-accent { background: var(--accent); }
+.sp-seg { display: flex; gap: 8px; }
+.sp-chip {
+  font-size: 11px;
+  padding: 5px 12px;
+  border-radius: 14px;
+  background: var(--bg-hover);
+  color: var(--text-dim);
+}
+.sp-chip.sp-accent-soft { background: var(--accent-soft); color: var(--accent); }
+:root.r-sharp #settings-preview,
+:root.r-sharp #settings-preview .sp-art,
+:root.r-sharp #settings-preview .sp-btn,
+:root.r-sharp #settings-preview .sp-chip { border-radius: 2px !important; }
+:root.r-round #settings-preview,
+:root.r-round #settings-preview .sp-art,
+:root.r-round #settings-preview .sp-btn,
+:root.r-round #settings-preview .sp-chip { border-radius: 16px !important; }
