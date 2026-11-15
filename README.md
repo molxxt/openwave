@@ -93,7 +93,7 @@ Don't distribute this app through app stores, and don't monetize it.
 
 <div align="center">
 
-Made with 🌊 and questionable taste in memes.
-Discord community — *coming soon.*
+Made with questionable taste in memes.
+Discord community — *https://discord.gg/GzGhSKrcku*
 
 </div>
