@@ -247,6 +247,22 @@
             <span>Continue to the next song automatically</span>
             <input type="checkbox" id="set-autoplay" />
           </label>
+          <h3 class="h3-gap">YouTube cookies</h3>
+          <p class="set-desc">If playback fails with “Sign in to confirm you’re not a bot”, pick the browser you use YouTube in — OpenWave will borrow its session (locally, nothing is uploaded). Firefox usually works best.</p>
+          <label class="set-row">
+            <span>Use cookies from</span>
+            <select id="cookie-select">
+              <option value="none">None (default)</option>
+              <option value="firefox">Firefox</option>
+              <option value="chrome">Chrome</option>
+              <option value="chromium">Chromium</option>
+              <option value="brave">Brave</option>
+              <option value="edge">Edge</option>
+              <option value="opera">Opera</option>
+              <option value="vivaldi">Vivaldi</option>
+              <option value="safari">Safari</option>
+            </select>
+          </label>
         </div>
 
         <div class="set-pane" id="pane-storage" hidden>

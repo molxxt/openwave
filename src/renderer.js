@@ -960,6 +960,14 @@ function renderSettings() {
   }
   $('accent-custom').value = /^#[0-9a-f]{6}$/i.test(settings.accent) ? settings.accent : '#a5a6f6';
   $('set-autoplay').checked = settings.autoplayNext;
+
+  // YouTube cookies preference
+  const cookieSelect = $('cookie-select');
+  const saved = localStorage.getItem('openwave:ytcookies');
+  if (saved) cookieSelect.value = saved;
+  window.api.getYtCookies().then((v) => {
+    if (v) { cookieSelect.value = v; localStorage.setItem('openwave:ytcookies', v); }
+  });
 }
 
 for (const btn of document.querySelectorAll('.set-nav')) {
@@ -982,6 +990,15 @@ $('set-autoplay').addEventListener('change', (e) => {
   settings.autoplayNext = e.target.checked;
   saveSettings();
   setStatus(settings.autoplayNext ? 'Autoplay enabled.' : 'Playback will stop after the last song.');
+});
+
+$('cookie-select').addEventListener('change', async (e) => {
+  const v = e.target.value;
+  localStorage.setItem('openwave:ytcookies', v);
+  await window.api.setYtCookies(v);
+  setStatus(v === 'none'
+    ? 'YouTube cookies disabled.'
+    : `Using YouTube session from ${v}. Close ${v} fully first if it still fails.`);
 });
 
 for (const b of document.querySelectorAll('#theme-seg button')) {

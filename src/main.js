@@ -25,6 +25,18 @@ const APP_REPO = 'molxxt/openwave'; // change if you rename the repo
 // fall back to whatever the OS provides. Bundling means users install nothing.
 const YTDLP_NAME = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp-linux';
 let ytdlpPathCache = null;
+let cookiePref = null; // optional --cookies-from-browser value (user preference)
+
+// cookie preference persists in userData so it survives restarts
+function prefFile() { return path.join(app.getPath('userData'), 'openwave-prefs.json'); }
+try { cookiePref = JSON.parse(fs.readFileSync(prefFile(), 'utf8')).cookies || null; } catch { /* none yet */ }
+
+ipcMain.handle('ytcookies:get', () => cookiePref);
+ipcMain.handle('ytcookies:set', (_event, browser) => {
+  cookiePref = browser && browser !== 'none' ? String(browser) : null;
+  try { fs.writeFileSync(prefFile(), JSON.stringify({ cookies: cookiePref })); } catch { /* best-effort */ }
+  return cookiePref;
+});
 
 function findYtDlp() {
   if (ytdlpPathCache) return ytdlpPathCache;
@@ -46,9 +58,12 @@ function findYtDlp() {
 
 /** Run yt-dlp with the given arguments, return stdout as a string. */
 function ytdlp(args) {
+  const full = [];
+  if (cookiePref) full.push('--cookies-from-browser', cookiePref);
+  full.push(...args);
   const bin = findYtDlp() || 'yt-dlp';
   return new Promise((resolve, reject) => {
-    execFile(bin, args, { maxBuffer: 20 * 1024 * 1024 }, (err, stdout, stderr) => {
+    execFile(bin, full, { maxBuffer: 20 * 1024 * 1024 }, (err, stdout, stderr) => {
       if (err) {
         const msg = (stderr || err.message || '').trim();
         if (err.code === 'ENOENT') {
@@ -100,12 +115,23 @@ function parseTracks(out, source = 'youtube') {
 /** Search YouTube or SoundCloud. Returns a list of tracks. */
 async function searchTracks(query, source = 'youtube') {
   const prefix = source === 'soundcloud' ? 'scsearch15:' : 'ytsearch15:';
-  const out = await ytdlp([
+  const base = [
     `${prefix}${query}`,
     '--flat-playlist',
     '--dump-json',
     '--no-warnings',
-  ]);
+  ];
+  let out;
+  try {
+    out = await ytdlp(base);
+  } catch (err) {
+    if (/sign in to confirm/i.test(err.message)) {
+      // YouTube bot-check: the tv player client usually slips through
+      out = await ytdlp(['--extractor-args', 'youtube:player_client=tv', ...base]);
+    } else {
+      throw err;
+    }
+  }
   return parseTracks(out, source);
 }
 
@@ -131,13 +157,28 @@ async function resolveStreamUrl(track) {
   // SoundCloud serves some tracks as HLS (.m3u8) which <audio> can't play;
   // prefer anything progressive, only fall back to HLS if nothing else exists.
   const fmt = isSc ? 'bestaudio[protocol!^=m3u8]/bestaudio/best' : 'bestaudio/best';
-  const out = await ytdlp([
+  const base = [
     '-f', fmt,
     '--no-playlist',
     '--no-warnings',
     '-g', // print the direct media URL only
     url,
-  ]);
+  ];
+  let out;
+  try {
+    out = await ytdlp(base);
+  } catch (err) {
+    if (/sign in to confirm/i.test(err.message)) {
+      // YouTube bot-check: retry with the tv player client before giving up
+      try {
+        out = await ytdlp(['--extractor-args', 'youtube:player_client=tv', ...base]);
+      } catch {
+        throw new Error('YouTube is asking for human verification. Open Settings \u2192 Playback \u2192 \u201cYouTube cookies\u201d and pick your browser \u2014 that fixes it permanently.');
+      }
+    } else {
+      throw err;
+    }
+  }
   const streamUrl = out.split('\n').map(s => s.trim()).filter(Boolean).pop();
   if (!streamUrl) throw new Error('Could not resolve an audio stream for this track');
   if (isSc && (/\.m3u8/i.test(streamUrl) || /format=hls/i.test(streamUrl))) {
