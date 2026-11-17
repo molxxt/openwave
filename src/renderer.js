@@ -1469,6 +1469,10 @@ async function playIndex(i, { startAt = null } = {}) {
     audio.play();
     setStatus('');
     if (!npExpand.hidden) fillNpExpand();
+    // resolve the next song in the background — song switches become instant
+    const repeat = localStorage.getItem('openwave:repeat');
+    const nxt = repeat === 'one' ? null : queue[current + 1];
+    if (nxt) window.api.prewarmStream(nxt).catch(() => {});
   } catch (err) {
     const loadingRow = document.querySelector(`.track[data-id="${CSS.escape(track.id)}"]`);
     if (loadingRow) loadingRow.classList.remove('loading');

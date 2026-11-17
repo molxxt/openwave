@@ -198,6 +198,21 @@ async function resolveStreamUrl(track) {
 
 // videoId -> { url, title } currently registered on the proxy
 const activeStreams = new Map();
+const ACTIVE_TTL = 45 * 60 * 1000; // resolved URLs stay valid ~45 min
+const prewarming = new Set(); // ids currently being resolved in the background
+
+function activeEntry(track) {
+  const entry = activeStreams.get(track.id);
+  if (!entry || Date.now() - entry.ts > ACTIVE_TTL) return null;
+  return entry;
+}
+
+async function resolveAndRegister(track) {
+  if (!track.source) track.source = 'youtube';
+  const streamUrl = await resolveStreamUrl(track);
+  activeStreams.set(track.id, { url: streamUrl, title: track.title, ts: Date.now() });
+  return `http://127.0.0.1:${proxyPort}/stream/${encodeURIComponent(track.id)}`;
+}
 
 function startProxyServer() {
   return new Promise((resolve, reject) => {
@@ -256,10 +271,18 @@ ipcMain.handle('search:tracks', async (_event, query, source) => {
 
 ipcMain.handle('stream:resolve', async (_event, track) => {
   if (!track || !track.id) throw new Error('no track id');
-  if (!track.source) track.source = 'youtube'; // old persisted tracks predate sources
-  const streamUrl = await resolveStreamUrl(track);
-  activeStreams.set(track.id, { url: streamUrl, title: track.title });
-  return `http://127.0.0.1:${proxyPort}/stream/${encodeURIComponent(track.id)}`;
+  const cached = activeEntry(track);
+  if (cached) return `http://127.0.0.1:${proxyPort}/stream/${encodeURIComponent(track.id)}`;
+  return resolveAndRegister(track);
+});
+
+// resolve the next song in the background so switching is instant
+ipcMain.handle('stream:prewarm', async (_event, track) => {
+  if (!track || !track.id) return;
+  if (activeEntry(track) || prewarming.has(track.id)) return;
+  prewarming.add(track.id);
+  try { await resolveAndRegister(track); } catch { /* best-effort */ }
+  finally { prewarming.delete(track.id); }
 });
 
 ipcMain.handle('app:openExternal', (_event, url) => {

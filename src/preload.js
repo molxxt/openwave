@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('api', {
   trendingYouTube: () => ipcRenderer.invoke('trending:youtube'),
   checkSystem: () => ipcRenderer.invoke('system:check'),
   getVersion: () => ipcRenderer.invoke('app:version'),
+  prewarmStream: (track) => ipcRenderer.invoke('stream:prewarm', track),
   checkUpdates: () => ipcRenderer.invoke('updates:check'),
   setYtCookies: (browser) => ipcRenderer.invoke('ytcookies:set', browser),
   getYtCookies: () => ipcRenderer.invoke('ytcookies:get'),
