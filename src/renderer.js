@@ -55,6 +55,7 @@ const btnLike = $('btn-like');
 const btnRepeat = $('btn-repeat');
 const btnMute = $('btn-mute');
 const btnSleep = $('btn-sleep');
+const btnUpNext = $('btn-upnext');
 const btnPrev = $('btn-prev');
 const btnPlay = $('btn-play');
 const btnNext = $('btn-next');
@@ -369,6 +370,13 @@ function trackEl(track, onClick, { removable = false, reorderable = false, index
     });
     li.append(x);
   }
+  if (reorderable) {
+    const grip = document.createElement('span');
+    grip.className = 't-grip';
+    grip.title = 'Drag to reorder';
+    grip.innerHTML = '<i></i><i></i><i></i><i></i><i></i><i></i>';
+    li.append(grip);
+  }
   li.addEventListener('click', onClick);
   li.addEventListener('contextmenu', (e) => {
     e.preventDefault();
@@ -417,6 +425,7 @@ function moveInQueue(from, to) {
   saveState();
   renderQueueView();
   highlightPlaying();
+  refreshUpNext();
 }
 
 function renderTrackList(container, tracks, opts) {
@@ -495,16 +504,38 @@ audio.addEventListener('pause', () => { if (view.type === 'home') renderHomeTile
 audio.addEventListener('play', () => { if (view.type === 'home') renderHomeTiles(); });
 
 // friendly empty state instead of a blank list
-function emptyState(container, message) {
-  const li = document.createElement('li');
-  li.className = 'empty-state';
+function emptyState(container, message, opts = {}) {
+  const el = document.createElement(container.tagName === 'UL' ? 'li' : 'div');
+  el.className = 'empty-state';
   const ic = document.createElement('div');
   ic.className = 'es-icon';
-  ic.innerHTML = icon('note');
+  ic.innerHTML = icon(opts.icon || 'note');
+  el.append(ic);
+  if (opts.title) {
+    const h = document.createElement('div');
+    h.className = 'es-title';
+    h.textContent = opts.title;
+    el.append(h);
+  }
   const p = document.createElement('p');
   p.textContent = message;
-  li.append(ic, p);
-  container.append(li);
+  el.append(p);
+  if (opts.action && opts.onAction) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'es-action';
+    b.textContent = opts.action;
+    b.addEventListener('click', opts.onAction);
+    el.append(b);
+  }
+  container.append(el);
+  return el;
+}
+
+function focusSearch() {
+  searchInput.focus({ preventScroll: true });
+  searchInput.select();
+  renderSearchHistory();
 }
 
 // ---------- views ----------
@@ -520,11 +551,21 @@ function setView(type, name = null) {
   staggerNextList = true;
   for (const el of document.querySelectorAll('.view')) el.hidden = true;
   $(`view-${type}`).hidden = false;
+  $('content').scrollTop = 0;
+  syncScrollFade();
   for (const el of document.querySelectorAll('.rail-btn[data-view]')) {
     el.classList.toggle('active', NAV_MAP[type] === el.dataset.view);
   }
   renderView();
 }
+
+// fade content into the glass top bar once it scrolls under it
+function syncScrollFade() {
+  const fade = $('scrollfade');
+  const box = $('content');
+  if (fade && box) fade.classList.toggle('on', box.scrollTop > 6);
+}
+$('content').addEventListener('scroll', syncScrollFade, { passive: true });
 
 function renderView() {
   renderRailPlaylists();
@@ -654,8 +695,13 @@ function renderRecentCards() {
   row.textContent = '';
   if (!recentlyPlayed.length) {
     const div = document.createElement('div');
-    div.className = 'tile-sub';
-    div.textContent = 'Nothing played yet — songs you play will appear here.';
+    div.className = 'row-empty';
+    div.innerHTML = icon('clock') + '<span>Songs you play show up here — start with a search, or pick something from Trending.</span>';
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = 'Search';
+    b.addEventListener('click', focusSearch);
+    div.append(b);
     row.append(div);
     return;
   }
@@ -686,7 +732,16 @@ async function ensureTrending() {
   } catch {
     trendingState = 'failed';
     row.textContent = '';
-    status.textContent = 'Trending is unavailable right now — the charts playlist could not be read.';
+    status.textContent = '';
+    const box = document.createElement('div');
+    box.className = 'row-empty';
+    box.innerHTML = icon('queue') + '<span>YouTube Music charts could not be read right now — yt-dlp may be offline.</span>';
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.textContent = 'Retry';
+    retry.addEventListener('click', () => { trendingState = 'idle'; trendingRetryAt = 0; ensureTrending(); });
+    box.append(retry);
+    row.append(box);
   }
 }
 
@@ -755,24 +810,38 @@ searchInput.addEventListener('focus', renderSearchHistory);
 searchInput.addEventListener('input', renderSearchHistory);
 searchInput.addEventListener('blur', () => setTimeout(hideSearchHistory, 150));
 
+let searchBusy = false;
+let searchError = '';
+let lastQuery = '';
+let searchSeq = 0;
+
 async function doSearch(q) {
   q = q.trim();
   if (!q) return;
 
+  lastQuery = q;
+  searchBusy = true;
+  searchError = '';
+  searchResults = [];
   resultsTitle.textContent = `Results for “${q}” (${musicSource === 'soundcloud' ? 'SoundCloud' : 'YouTube'})`;
-  resultsList.textContent = '';
-  showSkeletons(resultsList);
-  setStatus('Searching…', true);
-  try {
-    searchResults = await window.api.searchTracks(q, musicSource);
-    setStatus('');
-    if (!searchResults.length) setStatus('No results found.');
-  } catch (err) {
-    searchResults = [];
-    setStatus(`Search failed: ${err.message}`);
-  }
+  setView('results'); // the skeleton list renders before the request goes out
   pushSearchHistory(q);
-  setView('results');
+
+  const seq = ++searchSeq;
+  try {
+    const found = await window.api.searchTracks(q, musicSource);
+    if (seq !== searchSeq) return;
+    searchResults = found;
+  } catch (err) {
+    if (seq !== searchSeq) return;
+    searchResults = [];
+    searchError = err.message || 'the request failed';
+    setStatus(`Search failed: ${searchError}`);
+  }
+  searchBusy = false;
+  renderResultsView();
+  highlightPlaying();
+  if (!searchResults.length && !searchError) setStatus('No results found.');
 }
 searchForm.addEventListener('submit', (e) => {
   e.preventDefault();
@@ -781,11 +850,26 @@ searchForm.addEventListener('submit', (e) => {
 });
 
 function renderResultsView() {
-  resultsTitle.textContent = resultsTitle.textContent.replace(/\s·\s\d+$/, '')
-    + (searchResults.length ? ` · ${searchResults.length}` : '');
+  const base = resultsTitle.textContent.replace(/\s·\s\d+$/, '');
+  if (searchBusy) {
+    resultsTitle.textContent = base;
+    showSkeletons(resultsList, 7);
+    return;
+  }
+  resultsTitle.textContent = base + (searchResults.length ? ` · ${searchResults.length}` : '');
   renderTrackList(resultsList, searchResults, {});
-  if (!searchResults.length) {
-    emptyState(resultsList, 'No results — try different words, or check the artist spelling.');
+  if (searchResults.length) return;
+
+  if (searchError) {
+    emptyState(resultsList, `The search for “${lastQuery}” didn't go through: ${searchError}`, {
+      title: 'Search failed',
+      action: 'Try again',
+      onAction: () => doSearch(lastQuery),
+    });
+  } else if (lastQuery) {
+    emptyState(resultsList, `Nothing came back for “${lastQuery}”. Try fewer words, or a different spelling.`, {
+      title: 'No results',
+    });
   }
 }
 
@@ -804,7 +888,11 @@ function renderForYouView() {
   const recs = recTracks();
   renderTrackList(foryouList, recs, {});
   if (!recs.length) {
-    emptyState(foryouList, 'Play or like a few songs and they will show up here.');
+    emptyState(foryouList, 'Play or like a few songs and they will show up here.', {
+      title: 'Nothing here yet',
+      action: 'Search songs',
+      onAction: focusSearch,
+    });
   }
 }
 
@@ -812,7 +900,12 @@ function renderLikedView() {
   likedCount.textContent = likedSongs.length ? `· ${likedSongs.length}` : '';
   renderTrackList(likedList, likedSongs.map(t => ({ ...t })), {});
   if (!likedSongs.length) {
-    emptyState(likedList, 'Nothing here yet — press L while a song plays, or click the ♡ on any track.');
+    emptyState(likedList, 'Press L while a song plays, or click the heart on any track, and it lands here.', {
+      title: 'No liked songs yet',
+      icon: 'heart',
+      action: 'Search songs',
+      onAction: focusSearch,
+    });
   }
 }
 
@@ -820,10 +913,11 @@ function renderPlaylistsGrid() {
   playlistsGrid.textContent = '';
   plOverviewCount.textContent = playlists.length ? `· ${playlists.length}` : '';
   if (!playlists.length) {
-    const div = document.createElement('div');
-    div.className = 'empty';
-    div.textContent = 'No playlists yet — right-click any song and choose “New playlist…”.';
-    playlistsGrid.append(div);
+    emptyState(playlistsGrid, 'Group songs into collections you can play start to finish. Right-click any track and choose “New playlist…”, or start with a name.', {
+      title: 'No playlists yet',
+      action: '＋ New playlist',
+      onAction: () => $('pl-new-btn').click(),
+    });
     return;
   }
   for (const pl of playlists) {
@@ -926,11 +1020,60 @@ function renderQueueView() {
   queueCount.textContent = queue.length
     ? `· ${queue.length} ${queue.length === 1 ? 'track' : 'tracks'}${total ? ' · ' + fmtTotal(total) : ''}`
     : '';
+  renderQueueNow();
   renderTrackList(queueList, queue, { removable: true, reorderable: true });
   if (!queue.length) {
-    emptyState(queueList, 'Your queue is empty — search for something, or load a playlist.');
+    emptyState(queueList, 'Anything you play lands here — search for a song, or start a playlist and it will fill up.', {
+      title: 'Your queue is empty',
+      icon: 'queue',
+      action: 'Search songs',
+      onAction: focusSearch,
+    });
   }
 }
+
+// pinned card above the list so the current song never scrolls away
+function renderQueueNow() {
+  const box = $('queue-now');
+  if (!box) return;
+  const track = queue[current];
+  box.textContent = '';
+  if (!track) { box.hidden = true; box.classList.remove('paused'); return; }
+  box.hidden = false;
+  box.classList.toggle('paused', audio.paused);
+
+  const img = document.createElement('img');
+  img.src = track.thumb;
+  img.alt = '';
+  const meta = document.createElement('div');
+  meta.className = 'qn-meta';
+  const label = document.createElement('div');
+  label.className = 'qn-label';
+  label.textContent = audio.paused ? 'Paused' : 'Now playing';
+  const title = document.createElement('div');
+  title.className = 'qn-title';
+  title.textContent = track.title;
+  const sub = document.createElement('div');
+  sub.className = 'qn-sub';
+  sub.textContent = track.channel;
+
+  const eq = document.createElement('div');
+  eq.className = 'eq';
+  eq.innerHTML = '<i></i><i></i><i></i>';
+
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'qn-toggle';
+  toggle.title = audio.paused ? 'Resume' : 'Pause';
+  toggle.innerHTML = icon(audio.paused ? 'play' : 'pause');
+  toggle.addEventListener('click', togglePlay);
+
+  meta.append(label, title, sub);
+  box.append(img, meta, eq, toggle);
+}
+
+audio.addEventListener('play', () => { if (view.type === 'queue') renderQueueNow(); });
+audio.addEventListener('pause', () => { if (view.type === 'queue') renderQueueNow(); });
 
 // total length like "1h 12m" / "43 min"
 function fmtTotal(sec) {
@@ -967,6 +1110,7 @@ function addToQueue(track) {
   queue.push({ ...track });
   setStatus(`Added “${track.title}” to the queue.`);
   if (view.type === 'queue') renderQueueView();
+  refreshUpNext();
   saveState();
 }
 
@@ -1461,6 +1605,7 @@ clearQueueBtn.addEventListener('click', () => {
   saveState();
   renderQueueView();
   highlightPlaying();
+  refreshUpNext();
 });
 
 queueSaveBtn.addEventListener('click', () => {
@@ -1546,6 +1691,7 @@ async function playIndex(i, { startAt = null } = {}) {
   refreshNpLike();
   highlightPlaying();
   if (view.type === 'queue') renderQueueView();
+  refreshUpNext();
 }
 
 function stopPlayback() {
@@ -1674,6 +1820,7 @@ function removeAt(i) {
   saveState();
   renderQueueView();
   highlightPlaying();
+  refreshUpNext();
 }
 
 // ---------- player bar interactions ----------
@@ -1810,6 +1957,7 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'l') toggleLike(queue[current]);
   else if (e.key === 'r') btnRepeat.click();
   else if (e.key === 'm') btnMute.click();
+  else if (e.key === 'u') toggleUpNext();
   else if (e.key === 'z') toggleSleepPop();
   else if (e.key === 'e') openNpExpand();
   else if (e.key === '?') { const k = $('kbd-overlay'); k.hidden = !k.hidden; }
@@ -2066,6 +2214,7 @@ function parseSleepInput(raw) {
 
 /* ---------- popover ---------- */
 function openSleepPop() {
+  if (!upnextPop.hidden) closeUpNext();
   const r = btnSleep.getBoundingClientRect();
   const bar = $('playerbar').getBoundingClientRect();
   sleepPop.style.right = Math.max(10, innerWidth - r.right) + 'px';
@@ -2119,6 +2268,111 @@ $('sleep-custom').addEventListener('submit', (e) => {
 sleepStop.addEventListener('click', () => { closeSleepPop(); sleepNow(); });
 
 refreshSleep();
+
+// ---------- up next popover ----------
+const upnextPop = $('upnext-pop');
+const upList = $('up-list');
+const upCount = $('up-count');
+
+function renderUpNext() {
+  const from = Math.max(0, current + 1);
+  const total = Math.max(0, queue.length - from);
+  upCount.textContent = total ? `${total} song${total === 1 ? '' : 's'}` : '';
+  upList.textContent = '';
+
+  if (!total) {
+    const li = document.createElement('li');
+    li.className = 'up-empty';
+    li.textContent = queue[current]
+      ? 'Nothing after this — the queue ends here.'
+      : 'Nothing queued yet. Search for a song to get started.';
+    upList.append(li);
+    return;
+  }
+
+  queue.slice(from, from + 5).forEach((track, k) => {
+    const index = from + k;
+    const li = document.createElement('li');
+    li.className = 'up-row';
+    li.tabIndex = 0;
+    li.title = `Play “${track.title}”`;
+    const img = document.createElement('img');
+    img.src = track.thumb;
+    img.alt = '';
+    img.loading = 'lazy';
+    const meta = document.createElement('div');
+    meta.className = 'up-meta';
+    const t = document.createElement('div');
+    t.className = 'up-title';
+    t.textContent = track.title;
+    const c = document.createElement('div');
+    c.className = 'up-sub';
+    c.textContent = track.channel;
+    meta.append(t, c);
+    const dur = document.createElement('span');
+    dur.className = 'up-dur';
+    dur.textContent = track.duration != null ? fmtTime(track.duration) : '';
+    li.append(img, meta, dur);
+
+    const go = () => { closeUpNext(); playIndex(index); };
+    li.addEventListener('click', go);
+    li.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); }
+    });
+    upList.append(li);
+  });
+
+  if (total > 5) {
+    const li = document.createElement('li');
+    li.className = 'up-more';
+    li.textContent = `+${total - 5} more in the queue`;
+    upList.append(li);
+  }
+}
+
+function openUpNext() {
+  if (!sleepPop.hidden) closeSleepPop();
+  const r = btnUpNext.getBoundingClientRect();
+  const bar = $('playerbar').getBoundingClientRect();
+  upnextPop.style.right = Math.max(10, innerWidth - r.right) + 'px';
+  upnextPop.style.bottom = Math.max(10, innerHeight - bar.top + 8) + 'px';
+  renderUpNext();
+  upnextPop.hidden = false;
+  btnUpNext.classList.add('active');
+}
+
+function closeUpNext() {
+  if (!upnextPop) return;
+  upnextPop.hidden = true;
+  btnUpNext.classList.remove('active');
+}
+
+function toggleUpNext() {
+  if (upnextPop.hidden) openUpNext();
+  else closeUpNext();
+}
+
+// keep the panel honest while a song ends or the queue shifts
+function refreshUpNext() {
+  if (!upnextPop || upnextPop.hidden) return;
+  renderUpNext();
+}
+
+btnUpNext.addEventListener('click', toggleUpNext);
+
+document.addEventListener('click', (e) => {
+  if (upnextPop.hidden) return;
+  if (e.target.closest('#upnext-pop') || e.target.closest('#btn-upnext')) return;
+  closeUpNext();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !upnextPop.hidden) closeUpNext();
+});
+
+addEventListener('resize', () => { if (!upnextPop.hidden) openUpNext(); });
+
+$('up-open-queue').addEventListener('click', () => { closeUpNext(); setView('queue'); });
 
 function closeNpExpand() {
   npExpand.hidden = true;

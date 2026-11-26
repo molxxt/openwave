@@ -192,6 +192,7 @@
         <button type="submit">Save</button>
         <button type="button" id="queue-save-cancel">Cancel</button>
       </form>
+      <div id="queue-now" class="queue-now" hidden></div>
       <ul id="queue-list"></ul>
     </section>
 
@@ -303,6 +304,7 @@
           <div class="set-row"><span>Cycle repeat mode</span><kbd>R</kbd></div>
           <div class="set-row"><span>Mute / unmute</span><kbd>M</kbd></div>
           <div class="set-row"><span>Sleep timer</span><kbd>Z</kbd></div>
+          <div class="set-row"><span>Up next queue</span><kbd>U</kbd></div>
           <div class="set-row"><span>Open expanded player</span><kbd>E</kbd></div>
           <div class="set-row"><span>Shortcuts overlay</span><kbd>?</kbd></div>
           <div class="set-row"><span>Seek ±5 seconds</span><kbd>← →</kbd></div>
@@ -373,6 +375,7 @@
     </div>
 
     <div id="pb-right">
+      <button id="btn-upnext" title="Up next (U)"><svg class="ic" viewBox="0 0 24 24"><rect x="3.5" y="5.4" width="13.5" height="2.5" rx="1.25"/><rect x="3.5" y="10.75" width="13.5" height="2.5" rx="1.25"/><rect x="3.5" y="16.1" width="9" height="2.5" rx="1.25"/><path d="M18.6 12.4v6.7c0 .77.85 1.24 1.5.83l4.5-2.85a.98.98 0 0 0 0-1.66l-4.5-2.85c-.65-.41-1.5.06-1.5.83z"/></svg></button>
       <button id="btn-sleep" title="Sleep timer (Z)"><svg class="ic" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M20.4 14.6A8.6 8.6 0 0 1 9.4 3.6a8.6 8.6 0 1 0 11 11z"/></svg></button>
       <div id="np-volume">
         <button id="btn-mute" title="Mute (M)"><svg class="ic" viewBox="0 0 24 24"><path d="M4 9.8v4.4c0 .55.45 1 1 1h2.6l3.8 3.3c.65.56 1.6.1 1.6-.75V6.25c0-.85-.95-1.31-1.6-.75L7.6 8.8H5c-.55 0-1 .45-1 1z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M15.8 9.2a4 4 0 0 1 0 5.6M18.2 7a7 7 0 0 1 0 10"/></svg></button>
@@ -440,6 +443,13 @@
     </div>
   </div>
 
+  <!-- up next popover, anchored above the player bar -->
+  <div id="upnext-pop" hidden>
+    <div class="up-head"><span>Up next</span><span id="up-count"></span></div>
+    <ul id="up-list"></ul>
+    <button id="up-open-queue" class="up-footer" type="button">Open queue</button>
+  </div>
+
   <div id="ctxmenu" hidden></div>
   <div id="search-history" hidden></div>
 
@@ -494,6 +504,7 @@
           <div class="kbd-row"><span>Cycle repeat mode</span><kbd>R</kbd></div>
           <div class="kbd-row"><span>Mute / unmute</span><kbd>M</kbd></div>
           <div class="kbd-row"><span>Sleep timer</span><kbd>Z</kbd></div>
+          <div class="kbd-row"><span>Up next queue</span><kbd>U</kbd></div>
         </div>
         <div>
           <div class="kbd-row"><span>Seek ±5 seconds</span><kbd>← →</kbd></div>
@@ -505,6 +516,8 @@
       </div>
     </div>
   </div>
+
+  <div id="scrollfade" aria-hidden="true"></div>
 
   <script src="renderer.js"></script>
 </body>

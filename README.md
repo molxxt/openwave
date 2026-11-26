@@ -38,10 +38,10 @@ Your playlists, likes and history stay on your computer.
 
 - 🔍 **Search YouTube & SoundCloud** — one click to switch sources
 - 🖥️ **Expanded player** — big artwork, live spectrum visualizer, your queue beside it
-- 📋 **Playlists & queue** — drag & drop from search, drag to reorder, persistent everywhere
+- 📋 **Playlists & queue** — drag & drop from search, drag to reorder, a pinned now-playing card, and an up-next popover in the player bar
 - ❤️ **Liked songs & recommendations** — based on what you actually play
 - ⏯️ **Resume playback** — picks up where you left off, down to the second
-- ⌨️ **Keyboard first** — `Space` play/pause · `N`/`P` next/prev · `←`/`→` seek · `↑`/`↓` volume · `E` expanded player · `?` all shortcuts
+- ⌨️ **Keyboard first** — `Space` play/pause · `N`/`P` next/prev · `←`/`→` seek · `↑`/`↓` volume · `E` expanded player · `U` up next · `?` all shortcuts
 - 🌙 Sleep timer ready · 🌐 YouTube/SoundCloud source toggle · 🔔 Update checker
 - 🎨 **Make it yours** — 3 themes, 3 roundness presets, custom accent color, collapsible sidebar
 
