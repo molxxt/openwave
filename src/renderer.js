@@ -1760,7 +1760,7 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'l') toggleLike(queue[current]);
   else if (e.key === 'r') btnRepeat.click();
   else if (e.key === 'm') btnMute.click();
-  else if (e.key === 'z') cycleSleepTimer();
+  else if (e.key === 'z') toggleSleepPop();
   else if (e.key === 'e') openNpExpand();
   else if (e.key === '?') { const k = $('kbd-overlay'); k.hidden = !k.hidden; }
   else if (e.key === 'ArrowRight' && isFinite(audio.duration)) { e.preventDefault(); audio.currentTime = Math.min(audio.duration, audio.currentTime + 5); }
@@ -1917,11 +1917,23 @@ $('npx-tab-queue').addEventListener('click', () => setNpxTab('queue'));
 $('npx-tab-lyrics').addEventListener('click', () => setNpxTab('lyrics'));
 
 // ---------- sleep timer ----------
-const SLEEP_STEPS = [0, 15, 30, 45, 60, 90];
-let sleepStep = 0;
+const SLEEP_PRESETS = [15, 30, 45, 60, 90, 120];
+const sleepPop = $('sleep-pop');
+const sleepLeft = $('sleep-left');
+const sleepPresets = $('sleep-presets');
+const sleepInput = $('sleep-input');
+const sleepStop = $('sleep-stop');
+
 let sleepEndsAt = 0;
+let sleepMinutes = 0;
 let sleepTick = 0;
 let sleepFade = 0;
+
+function sleepShort(minutes) {
+  if (minutes % 60 === 0) return minutes / 60 + 'h';
+  if (minutes < 60) return minutes + 'm';
+  return Math.floor(minutes / 60) + 'h' + String(minutes % 60).padStart(2, '0');
+}
 
 function sleepCountdown() {
   const s = Math.max(0, Math.ceil((sleepEndsAt - Date.now()) / 1000));
@@ -1929,8 +1941,15 @@ function sleepCountdown() {
 }
 
 function refreshSleep() {
-  btnSleep.classList.toggle('active', !!sleepEndsAt);
-  btnSleep.title = sleepEndsAt ? 'Sleep in ' + sleepCountdown() + ' (Z)' : 'Sleep timer (Z)';
+  const on = !!sleepEndsAt;
+  btnSleep.classList.toggle('active', on);
+  btnSleep.title = on ? 'Sleep in ' + sleepCountdown() + ' (Z)' : 'Sleep timer (Z)';
+  if (!sleepPop) return;
+  sleepLeft.textContent = on ? sleepCountdown() : '';
+  sleepStop.hidden = !on;
+  for (const b of sleepPresets.children) {
+    b.classList.toggle('on', on && Number(b.dataset.min) === sleepMinutes);
+  }
 }
 
 function clearSleepFade() {
@@ -1941,12 +1960,14 @@ function stopSleepTimer() {
   clearInterval(sleepTick);
   sleepTick = 0;
   sleepEndsAt = 0;
+  sleepMinutes = 0;
   refreshSleep();
 }
 
 function sleepNow() {
   stopSleepTimer();
   clearSleepFade();
+  closeSleepPop();
   const level = audio.volume;
   const steps = 32;
   let step = 0;
@@ -1966,21 +1987,87 @@ function setSleepTimer(minutes) {
   stopSleepTimer();
   clearSleepFade();
   if (!minutes) { setStatus('Sleep timer off.'); return; }
+  sleepMinutes = minutes;
   sleepEndsAt = Date.now() + minutes * 60000;
   refreshSleep();
-  setStatus('Sleep timer set for ' + minutes + ' minutes.');
+  setStatus('Sleep timer set for ' + (minutes < 60 ? minutes + ' min' : sleepShort(minutes)) + '.');
   sleepTick = setInterval(() => {
     if (Date.now() >= sleepEndsAt) sleepNow();
     else refreshSleep();
   }, 1000);
 }
 
-function cycleSleepTimer() {
-  sleepStep = (sleepStep + 1) % SLEEP_STEPS.length;
-  setSleepTimer(SLEEP_STEPS[sleepStep]);
+/* accepts "25" (minutes) or "1:30" (h:mm) */
+function parseSleepInput(raw) {
+  const v = String(raw || '').trim().toLowerCase().replace(',', '.');
+  if (!v) return 0;
+  let mins = 0;
+  if (v.includes(':')) {
+    const [h, m] = v.split(':');
+    mins = (Number(h) || 0) * 60 + (Number(m) || 0);
+  } else {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return 0;
+    mins = n;
+  }
+  if (!(mins > 0)) return 0;
+  return Math.min(600, Math.max(1, Math.round(mins)));
 }
 
-btnSleep.addEventListener('click', cycleSleepTimer);
+/* ---------- popover ---------- */
+function openSleepPop() {
+  const r = btnSleep.getBoundingClientRect();
+  const bar = $('playerbar').getBoundingClientRect();
+  sleepPop.style.right = Math.max(10, innerWidth - r.right) + 'px';
+  sleepPop.style.bottom = Math.max(10, innerHeight - bar.top + 8) + 'px';
+  sleepPop.hidden = false;
+  refreshSleep();
+}
+
+function closeSleepPop() {
+  if (sleepPop) sleepPop.hidden = true;
+}
+
+function toggleSleepPop() {
+  if (sleepPop.hidden) openSleepPop();
+  else closeSleepPop();
+}
+
+for (const m of SLEEP_PRESETS) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'sp-preset';
+  b.dataset.min = String(m);
+  b.textContent = sleepShort(m);
+  b.addEventListener('click', () => { setSleepTimer(m); closeSleepPop(); });
+  sleepPresets.append(b);
+}
+
+btnSleep.addEventListener('click', toggleSleepPop);
+
+document.addEventListener('click', (e) => {
+  if (sleepPop.hidden) return;
+  if (e.target.closest('#sleep-pop') || e.target.closest('#btn-sleep')) return;
+  closeSleepPop();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !sleepPop.hidden) closeSleepPop();
+});
+
+addEventListener('resize', () => { if (!sleepPop.hidden) openSleepPop(); });
+
+$('sleep-custom').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const mins = parseSleepInput(sleepInput.value);
+  if (!mins) { setStatus('Enter minutes (25) or a time (1:30).'); return; }
+  sleepInput.value = '';
+  setSleepTimer(mins);
+  closeSleepPop();
+});
+
+sleepStop.addEventListener('click', () => { closeSleepPop(); sleepNow(); });
+
 refreshSleep();
 
 function closeNpExpand() {

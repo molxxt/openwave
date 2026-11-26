@@ -378,6 +378,17 @@
     </div>
   </footer>
 
+  <!-- sleep timer popover, anchored above the player bar -->
+  <div id="sleep-pop" hidden>
+    <div class="sp-head"><span>Sleep timer</span><span id="sleep-left"></span></div>
+    <div class="sp-grid" id="sleep-presets"></div>
+    <form id="sleep-custom" class="sp-custom" autocomplete="off">
+      <input id="sleep-input" type="text" inputmode="numeric" placeholder="25 or 1:30" aria-label="Custom sleep time" />
+      <button type="submit" class="sp-set">Set</button>
+    </form>
+    <button type="button" id="sleep-stop" class="sp-stop" hidden>Turn off &amp; fade out now</button>
+  </div>
+
   <!-- playlist editor -->
   <div id="pl-edit-overlay" hidden>
     <div id="pl-edit-dialog">
