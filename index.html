@@ -41,7 +41,10 @@
       background-color: var(--bg);
       background-image:
         radial-gradient(820px 460px at 82% -6%, rgba(165, 166, 246, 0.10), transparent 70%),
-        radial-gradient(640px 420px at 2% 16%, rgba(143, 211, 246, 0.05), transparent 70%);
+        radial-gradient(640px 420px at 2% 16%, rgba(165, 166, 246, 0.05), transparent 70%);
+      background-image:
+        radial-gradient(820px 460px at 82% -6%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 70%),
+        radial-gradient(640px 420px at 2% 16%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 70%);
       background-repeat: no-repeat;
       color: var(--text);
       font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Inter, sans-serif;
@@ -49,7 +52,7 @@
       -webkit-font-smoothing: antialiased;
       overflow-x: hidden;
     }
-    ::selection { background: rgba(165, 166, 246, 0.3); color: #fff; }
+    ::selection { background: rgba(165, 166, 246, 0.3); background: color-mix(in srgb, var(--accent) 30%, transparent); color: #fff; }
     a { color: inherit; text-decoration: none; }
     b, strong { font-weight: 600; }
     svg { display: block; }
@@ -72,6 +75,8 @@
     .brand { display: inline-flex; align-items: center; gap: 9px; font-weight: 700; font-size: 17px; letter-spacing: -0.02em; color: var(--text); }
     .brand svg { width: 25px; height: 25px; flex: none; }
     .brand b { color: var(--accent); font-weight: 700; }
+    .brand svg g { stroke: var(--accent); }
+    .brand svg > circle { fill: var(--accent); }
     .nav-links { display: flex; gap: 24px; margin-left: 10px; font-size: 14px; color: var(--dim); }
     .nav-links a:hover { color: var(--text); }
     .nav-side { margin-left: auto; display: flex; align-items: center; gap: 6px; }
@@ -83,7 +88,7 @@
       border-radius: 8px; background: var(--accent); color: #12121a;
       font-size: 13px; font-weight: 600;
     }
-    .btn-sm:hover { background: #b8b9ff; }
+    .btn-sm:hover { background: #b8b9ff; background: color-mix(in srgb, var(--accent) 82%, #fff); }
 
     /* ---------- buttons ---------- */
     .btnrow { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
@@ -98,7 +103,7 @@
     .btn .dl { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; line-height: 1.25; }
     .btn .dl b { font-weight: 600; font-size: 14.5px; }
     .btn-primary { background: var(--accent); color: #12121a; }
-    .btn-primary:hover { background: #b8b9ff; }
+    .btn-primary:hover { background: #b8b9ff; background: color-mix(in srgb, var(--accent) 82%, #fff); }
     .btn-ghost { border: 1px solid var(--border-strong); color: var(--text); }
     .btn-ghost:hover { border-color: var(--text); }
 
@@ -119,6 +124,7 @@
       content: ""; position: absolute; z-index: 0;
       right: -40px; top: -40px; width: 74%; height: 82%;
       background: rgba(165, 166, 246, 0.14);
+      background: color-mix(in srgb, var(--accent) 14%, transparent);
       border-radius: 50%;
       filter: blur(64px);
       pointer-events: none;
@@ -127,7 +133,7 @@
 
     /* ---------- app mockup ---------- */
     .mk {
-      --acc: #a5a6f6;
+      --acc: var(--accent);
       --mk-bg: #15151b;
       --mk-raised: #1c1c24;
       --mk-border: rgba(255, 255, 255, 0.08);
@@ -146,6 +152,8 @@
     .mk[data-theme="light"] { --mk-bg: #f6f5f9; --mk-raised: #ffffff; --mk-border: #e6e5ee; --mk-text: #1b1b22; --mk-dim: #6d6b7a; }
     .mk-rail { background: var(--mk-raised); border-right: 1px solid var(--mk-border); display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 13px 0; }
     .mk-logo { width: 22px; height: 22px; margin-bottom: 9px; }
+    .mk-logo g { stroke: var(--acc); }
+    .mk-logo > circle { fill: var(--acc); }
     .mk-rail button { width: 32px; height: 32px; border: 0; background: none; border-radius: 7px; display: grid; place-items: center; color: var(--mk-dim); cursor: default; }
     .mk-rail button.on { background: var(--acc); color: var(--mk-bg); }
     .mk-rail button svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
@@ -231,6 +239,7 @@
       width: 32px; height: 32px; border-radius: 8px;
       display: grid; place-items: center;
       background: rgba(165, 166, 246, 0.10);
+      background: color-mix(in srgb, var(--accent) 10%, transparent);
       color: var(--accent); margin-bottom: 13px;
     }
     .card .ico svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
@@ -283,7 +292,7 @@
     .cc-btn { display: inline-flex; align-items: center; height: 36px; padding: 0 14px; border-radius: 8px; background: #5865f2; color: #fff; font-size: 13px; font-weight: 600; flex: none; }
     .cc-btn:hover { background: #6b76f5; }
     .cc-btn.accent { background: var(--accent); color: #12121a; }
-    .cc-btn.accent:hover { background: #b8b9ff; }
+    .cc-btn.accent:hover { background: #b8b9ff; background: color-mix(in srgb, var(--accent) 82%, #fff); }
     .cc-btn.soon { background: transparent; border: 1px solid var(--border); color: var(--muted); cursor: default; }
     .cc-btn.soon:hover { background: transparent; }
     .cc-text a { color: var(--accent); }
@@ -297,6 +306,9 @@
       border: 1px solid var(--border);
       background:
         radial-gradient(560px 240px at 50% -10%, rgba(165, 166, 246, 0.14), transparent 70%),
+        var(--surface);
+      background:
+        radial-gradient(560px 240px at 50% -10%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%),
         var(--surface);
     }
     .cta h2 { font-size: clamp(27px, 3.4vw, 38px); letter-spacing: -0.04em; line-height: 1.08; font-weight: 700; margin-bottom: 10px; }
@@ -460,8 +472,8 @@
                 <div class="mk-swatches" id="mk-swatches" aria-label="Accent color"></div>
               </div>
               <div class="demo-group">
-                <span class="demo-key">Theme</span>
-                <div class="mk-themes" role="group" aria-label="Theme">
+                <span class="demo-key">App theme</span>
+                <div class="mk-themes" role="group" aria-label="App theme preview">
                   <button data-t="dark" class="on">Dark</button>
                   <button data-t="oled">OLED</button>
                   <button data-t="light">Light</button>
@@ -629,7 +641,9 @@
       const row = document.getElementById('mk-swatches');
       const presets = ['#a5a6f6', '#8fd3f6', '#8fe3b0', '#f6a5c0', '#f6c46b', '#f68c6b'];
       const val = document.getElementById('mk-val');
+      const root = document.documentElement;
       function apply(color) {
+        root.style.setProperty('--accent', color);
         mk.style.setProperty('--acc', color);
         val.textContent = color.toUpperCase();
         Array.from(row.children).forEach((b) => b.classList.toggle('on', b.dataset.c === color));
