@@ -5,6 +5,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('api', {
   searchTracks: (query, source) => ipcRenderer.invoke('search:tracks', query, source),
   trendingYouTube: () => ipcRenderer.invoke('trending:youtube'),
+  findLyrics: (track) => ipcRenderer.invoke('lyrics:find', track),
   checkSystem: () => ipcRenderer.invoke('system:check'),
   getVersion: () => ipcRenderer.invoke('app:version'),
   prewarmStream: (track) => ipcRenderer.invoke('stream:prewarm', track),

@@ -53,6 +53,7 @@ const npChannel = $('np-channel');
 const btnLike = $('btn-like');
 const btnRepeat = $('btn-repeat');
 const btnMute = $('btn-mute');
+const btnSleep = $('btn-sleep');
 const btnPrev = $('btn-prev');
 const btnPlay = $('btn-play');
 const btnNext = $('btn-next');
@@ -612,8 +613,11 @@ function renderRecentCards() {
 }
 
 let trendingState = 'idle'; // idle | loading | done | failed
+let trendingRetryAt = 0;    // don't hammer yt-dlp after a failure
 async function ensureTrending() {
   if (trendingState === 'loading' || trendingState === 'done') return;
+  if (trendingState === 'failed' && Date.now() < trendingRetryAt) return;
+  trendingRetryAt = Date.now() + 60000;
   const row = $('trending-cards');
   const status = $('trending-status');
   if (musicSource === 'soundcloud') {
@@ -626,13 +630,13 @@ async function ensureTrending() {
   try {
     const tracks = await window.api.trendingYouTube();
     trendingState = 'done';
-    status.textContent = '';
+    status.textContent = 'YouTube Music · Top 100';
     row.textContent = '';
     tracks.forEach((t, i) => row.append(mediaCard(t, i)));
   } catch {
     trendingState = 'failed';
     row.textContent = '';
-    status.textContent = 'Trending is unavailable right now (yt-dlp could not fetch it).';
+    status.textContent = 'Trending is unavailable right now — the charts playlist could not be read.';
   }
 }
 
@@ -1639,6 +1643,8 @@ audio.addEventListener('timeupdate', () => {
     }
   }
 
+  if (!npExpand.hidden && lyricsTab === 'lyrics') updateLyricHighlight();
+
   if (isSeeking || !isFinite(audio.duration)) return;
 
   // remember playback position so the next launch resumes here (every ~5s)
@@ -1744,6 +1750,7 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'l') toggleLike(queue[current]);
   else if (e.key === 'r') btnRepeat.click();
   else if (e.key === 'm') btnMute.click();
+  else if (e.key === 'z') cycleSleepTimer();
   else if (e.key === 'e') openNpExpand();
   else if (e.key === '?') { const k = $('kbd-overlay'); k.hidden = !k.hidden; }
   else if (e.key === 'ArrowRight' && isFinite(audio.duration)) { e.preventDefault(); audio.currentTime = Math.min(audio.duration, audio.currentTime + 5); }
@@ -1777,11 +1784,194 @@ function fillNpExpand() {
   $('npx-play').innerHTML = icon(audio.paused ? 'play' : 'pause');
   refreshNpLike();
   renderNpxQueue();
+  loadLyrics(track);
+  updateLyricHighlight(true);
 }
 
 function renderNpxQueue() {
   renderTrackList($('npx-queue-list'), queue, { removable: true });
 }
+
+// ---------- lyrics (lrclib, time-synced when available) ----------
+let lyricsFor = null;   // track id the panel currently belongs to
+let lyricsLines = [];   // [{ t, text }] — empty when only plain lyrics exist
+let lyricsIndex = -1;
+let lyricsTab = 'queue';
+
+function parseLrc(lrc) {
+  const stamp = /\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?\]/g;
+  const lines = [];
+  for (const raw of String(lrc).split('\n')) {
+    const times = [...raw.matchAll(stamp)];
+    if (!times.length) continue;
+    const text = raw.replace(stamp, '').trim();
+    if (!text) continue;
+    for (const m of times) {
+      const frac = m[3] ? Number('0.' + m[3]) : 0;
+      lines.push({ t: Number(m[1]) * 60 + Number(m[2]) + frac, text });
+    }
+  }
+  lines.sort((a, b) => a.t - b.t);
+  return lines;
+}
+
+function setNpxTab(tab) {
+  lyricsTab = tab;
+  $('npx-tab-queue').classList.toggle('active', tab === 'queue');
+  $('npx-tab-lyrics').classList.toggle('active', tab === 'lyrics');
+  $('npx-pane-queue').hidden = tab !== 'queue';
+  $('npx-pane-lyrics').hidden = tab !== 'lyrics';
+  if (tab === 'lyrics') updateLyricHighlight(true);
+}
+
+function updateLyricHighlight(force = false) {
+  if (!lyricsLines.length) return;
+  const t = audio.currentTime;
+  let i = -1;
+  while (i + 1 < lyricsLines.length && lyricsLines[i + 1].t <= t + 0.2) i++;
+  if (i === lyricsIndex && !force) return;
+  lyricsIndex = i;
+
+  const box = $('npx-lyrics');
+  const kids = box.children;
+  for (let k = 0; k < kids.length; k++) kids[k].classList.toggle('now', k === i);
+  const active = kids[i];
+  if (active && !$('npx-pane-lyrics').hidden) {
+    const top = active.offsetTop - box.clientHeight / 2 + active.clientHeight / 2;
+    box.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  }
+}
+
+function renderLyrics(res) {
+  const box = $('npx-lyrics');
+  const note = $('npx-lyrics-empty');
+  box.textContent = '';
+  lyricsLines = [];
+  lyricsIndex = -1;
+  $('npx-lyrics-dot').hidden = true;
+
+  if (!res) {
+    note.hidden = false;
+    note.textContent = 'No lyrics found for this track.';
+    return;
+  }
+  if (res.synced) lyricsLines = parseLrc(res.synced);
+
+  if (lyricsLines.length) {
+    note.hidden = true;
+    for (const line of lyricsLines) {
+      const div = document.createElement('div');
+      div.className = 'npx-lyric';
+      div.textContent = line.text;
+      box.append(div);
+    }
+    $('npx-lyrics-dot').hidden = false;
+  } else if (res.plain) {
+    note.hidden = true;
+    for (const line of res.plain.split('\n')) {
+      const div = document.createElement('div');
+      div.className = 'npx-lyric static';
+      div.textContent = line.trim() || ' ';
+      box.append(div);
+    }
+  } else {
+    note.hidden = false;
+    note.textContent = res.instrumental ? 'Instrumental — nothing to sing along to.' : 'No lyrics found for this track.';
+  }
+  updateLyricHighlight(true);
+}
+
+async function loadLyrics(track) {
+  if (!track || !track.id) return;
+  if (lyricsFor === track.id) return;
+  lyricsFor = track.id;
+
+  const box = $('npx-lyrics');
+  const note = $('npx-lyrics-empty');
+  box.textContent = '';
+  lyricsLines = [];
+  lyricsIndex = -1;
+  note.hidden = false;
+  note.textContent = 'Looking for lyrics…';
+  $('npx-lyrics-dot').hidden = true;
+
+  let res = null;
+  try {
+    res = await window.api.findLyrics({ title: track.title, channel: track.channel, duration: track.duration });
+  } catch { res = null; }
+  if (lyricsFor !== track.id) return; // switched songs while we were looking
+  renderLyrics(res);
+}
+
+$('npx-tab-queue').addEventListener('click', () => setNpxTab('queue'));
+$('npx-tab-lyrics').addEventListener('click', () => setNpxTab('lyrics'));
+
+// ---------- sleep timer ----------
+const SLEEP_STEPS = [0, 15, 30, 45, 60, 90];
+let sleepStep = 0;
+let sleepEndsAt = 0;
+let sleepTick = 0;
+let sleepFade = 0;
+
+function sleepCountdown() {
+  const s = Math.max(0, Math.ceil((sleepEndsAt - Date.now()) / 1000));
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+
+function refreshSleep() {
+  btnSleep.classList.toggle('active', !!sleepEndsAt);
+  btnSleep.title = sleepEndsAt ? 'Sleep in ' + sleepCountdown() + ' (Z)' : 'Sleep timer (Z)';
+}
+
+function clearSleepFade() {
+  if (sleepFade) { clearInterval(sleepFade); sleepFade = 0; }
+}
+
+function stopSleepTimer() {
+  clearInterval(sleepTick);
+  sleepTick = 0;
+  sleepEndsAt = 0;
+  refreshSleep();
+}
+
+function sleepNow() {
+  stopSleepTimer();
+  clearSleepFade();
+  const level = audio.volume;
+  const steps = 32;
+  let step = 0;
+  setStatus('Sleep timer — fading out…', true);
+  sleepFade = setInterval(() => {
+    step++;
+    audio.volume = Math.max(0, level * (1 - step / steps));
+    if (step < steps) return;
+    clearSleepFade();
+    audio.pause();
+    audio.volume = level;
+    setStatus('Sleep timer — paused. Good night.');
+  }, 180);
+}
+
+function setSleepTimer(minutes) {
+  stopSleepTimer();
+  clearSleepFade();
+  if (!minutes) { setStatus('Sleep timer off.'); return; }
+  sleepEndsAt = Date.now() + minutes * 60000;
+  refreshSleep();
+  setStatus('Sleep timer set for ' + minutes + ' minutes.');
+  sleepTick = setInterval(() => {
+    if (Date.now() >= sleepEndsAt) sleepNow();
+    else refreshSleep();
+  }, 1000);
+}
+
+function cycleSleepTimer() {
+  sleepStep = (sleepStep + 1) % SLEEP_STEPS.length;
+  setSleepTimer(SLEEP_STEPS[sleepStep]);
+}
+
+btnSleep.addEventListener('click', cycleSleepTimer);
+refreshSleep();
 
 function closeNpExpand() {
   npExpand.hidden = true;

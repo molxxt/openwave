@@ -134,18 +134,47 @@ async function searchTracks(query, source = 'youtube') {
   return parseTracks(out, source);
 }
 
-// Trending feed, fetched once per session
+// ----------------------------------------------------------
+// Trending
+// YouTube retired the /feed/trending page (it now redirects to
+// the home page), so trending comes from YouTube Music's
+// official "Top 100 Songs" chart playlist instead. yt-dlp reads
+// it like any other playlist, so every entry is a real video id.
+// ----------------------------------------------------------
+const TRENDING_LIST = 'https://www.youtube.com/playlist?list=PL4fGSI1pDJn6O1LS0XSdF3RyO0Rq_LDeI';
+const TRENDING_TTL = 3 * 60 * 60 * 1000; // charts move slowly — 3h is plenty
+
 let trendingCache = null;
+
+function trendingCacheFile() { return path.join(app.getPath('userData'), 'openwave-trending.json'); }
+
+function readTrendingCache() {
+  try {
+    const raw = JSON.parse(fs.readFileSync(trendingCacheFile(), 'utf8'));
+    if (Array.isArray(raw.tracks) && raw.tracks.length && Date.now() - (raw.at || 0) < TRENDING_TTL) {
+      return raw.tracks;
+    }
+  } catch { /* no usable cache yet */ }
+  return null;
+}
+
 async function fetchTrending() {
   if (trendingCache) return trendingCache;
+  const cached = readTrendingCache();
+  if (cached) { trendingCache = cached; return cached; }
+
   const out = await ytdlp([
     '--flat-playlist',
     '--dump-json',
     '--no-warnings',
-    'https://www.youtube.com/feed/trending',
+    '--playlist-end', '24',
+    TRENDING_LIST,
   ]);
-  trendingCache = parseTracks(out).slice(0, 12);
-  return trendingCache;
+  const tracks = parseTracks(out).slice(0, 12);
+  if (!tracks.length) throw new Error('The charts playlist came back empty');
+  trendingCache = tracks;
+  try { fs.writeFileSync(trendingCacheFile(), JSON.stringify({ at: Date.now(), tracks })); } catch { /* best-effort */ }
+  return tracks;
 }
 
 /** Resolve a track to a direct audio stream URL (best audio-only format). */
@@ -290,6 +319,94 @@ ipcMain.handle('app:openExternal', (_event, url) => {
 });
 
 ipcMain.handle('trending:youtube', () => fetchTrending());
+
+// ----------------------------------------------------------
+// Lyrics — lrclib.net (free, open, no key). Returns time-synced
+// LRC when the database has it, plain text otherwise.
+// ----------------------------------------------------------
+function lyricQuery(track) {
+  const title = String(track.title || '')
+    .replace(/\s*[([][^)\]]*(official|lyric|lyrics|video|audio|visuali[sz]er|remaster|explicit|mv|clip)[^)\]]*[)\]]/gi, ' ')
+    .replace(/\s+(feat\.?|ft\.?|featuring)\s+.*$/i, '')
+    .replace(/\s*[-–|]\s*(official|lyrics?|video|audio|visualizer|mv).*$/i, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+  const artist = String(track.channel || '')
+    .replace(/\s*-\s*topic$/i, '')
+    .replace(/\s*vevo$/i, '')
+    .trim();
+  return { title, artist };
+}
+
+async function lrclib(url) {
+  try {
+    const res = await fetch(url, { headers: { 'User-Agent': 'OpenWave (https://github.com/molxxt/openwave)' } });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+}
+
+// rank a lrclib hit: synced lyrics win, then the closest duration
+function lyricRank(entry, dur) {
+  let score = entry.syncedLyrics ? 0 : 100;
+  if (dur && entry.duration) {
+    const diff = Math.abs(entry.duration - dur);
+    score += diff > 20 ? 40 : diff / 5;
+  }
+  return score;
+}
+
+ipcMain.handle('lyrics:find', async (_event, track) => {
+  if (!track || !track.title) return null;
+  const { title, artist } = lyricQuery(track);
+  const dur = Math.round(Number(track.duration) || 0);
+  if (!title) return null;
+
+  // YouTube titles are usually "Artist - Song"; lrclib indexes the song
+  // alone, so try the whole title as well as each side of the dash.
+  const variants = [];
+  const addVariant = (value) => {
+    const v = String(value || '').trim();
+    if (v && !variants.includes(v)) variants.push(v);
+  };
+  addVariant(title);
+  title.split(/\s+[-–—]\s+/).forEach(addVariant);
+
+  const urls = [];
+  for (const v of variants) {
+    if (artist && dur) {
+      urls.push('https://lrclib.net/api/get?artist_name=' + encodeURIComponent(artist)
+        + '&track_name=' + encodeURIComponent(v) + '&duration=' + dur);
+    }
+  }
+  for (const v of variants) {
+    const params = new URLSearchParams({ track_name: v });
+    if (artist) params.set('artist_name', artist);
+    urls.push('https://lrclib.net/api/search?' + params.toString());
+  }
+  for (const v of variants) {
+    const q = (v + ' ' + artist).trim();
+    urls.push('https://lrclib.net/api/search?' + new URLSearchParams({ q }).toString());
+  }
+
+  let fallback = null;
+  for (const url of urls) {
+    const data = await lrclib(url);
+    const list = (Array.isArray(data) ? data : data ? [data] : [])
+      .filter((d) => d && (d.syncedLyrics || d.plainLyrics || d.instrumental));
+    if (!list.length) continue;
+    list.sort((a, b) => lyricRank(a, dur) - lyricRank(b, dur));
+    const best = list[0];
+    const payload = {
+      synced: best.syncedLyrics || null,
+      plain: best.plainLyrics || null,
+      instrumental: !best.syncedLyrics && !best.plainLyrics,
+    };
+    if (payload.synced) return payload;   // synced always wins
+    if (!fallback) fallback = payload;
+  }
+  return fallback;
+});
 
 ipcMain.handle('app:version', () => app.getVersion());
 
