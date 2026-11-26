@@ -1,12 +1,16 @@
 name: Build OpenWave
 
 # Runs on every version tag (v0.7.0, ...) and lets you trigger it manually.
-# Builds Linux (AppImage) and Windows (portable exe + installer) automatically.
+# Builds Linux (AppImage + tarball) and Windows (portable exe + installer), then
+# attaches all of them to a draft release you can review and publish.
 
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -40,7 +44,6 @@ jobs:
         run: npm install
 
       - name: Build
-        # --publish never: we don't auto-publish releases, we upload artifacts
         run: npm run dist -- --publish never
 
       - name: Upload Linux build
@@ -48,7 +51,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: OpenWave-Linux
-          path: dist/*.AppImage
+          path: |
+            dist/*.AppImage
+            dist/*.tar.gz
           if-no-files-found: error
 
       - name: Upload Windows build
@@ -59,3 +64,25 @@ jobs:
           path: |
             dist/*.exe
           if-no-files-found: error
+
+  # collect both platforms' artifacts and attach them to a draft release;
+  # open the release on GitHub, check it, then hit publish
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          files: |
+            dist/*.AppImage
+            dist/*.tar.gz
+            dist/*.exe
