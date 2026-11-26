@@ -532,6 +532,9 @@ function emptyState(container, message, opts = {}) {
   return el;
 }
 
+// the window surface is only rounded on Linux, where it is transparent
+if (window.api.platform !== 'linux') document.body.classList.add('no-round');
+
 function focusSearch() {
   searchInput.focus({ preventScroll: true });
   searchInput.select();
@@ -1270,6 +1273,10 @@ for (const btn of document.querySelectorAll('[data-clear]')) {
 $('btn-minimize').addEventListener('click', () => window.api.windowControls.minimize());
 $('btn-close').addEventListener('click', () => window.api.windowControls.close());
 $('btn-maximize').addEventListener('click', () => window.api.windowControls.maximize());
+// the window surface is rounded; drop the radius while maximized
+window.api.windowControls.onMaximized?.((isMaximized) => {
+  document.body.classList.toggle('maximized', isMaximized);
+});
 // On Linux nothing maximizes a frameless drag region, so do it here.
 // Windows/macOS already handle it at the native caption level — hooking it
 // there too would maximize and immediately restore on a double-click.

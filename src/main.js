@@ -438,10 +438,9 @@ ipcMain.handle('updates:check', async () => {
 
 // keep the window's background color in sync with the chosen theme (no startup flash)
 ipcMain.on('theme:background', (_event, theme) => {
-  if (mainWindow) {
-    const color = theme === 'light' ? '#f4f4f6' : theme === 'oled' ? '#000000' : '#121212';
-    mainWindow.setBackgroundColor(color);
-  }
+  if (!mainWindow || ROUNDED_WINDOW) return; // keep the alpha channel intact
+  const color = theme === 'light' ? '#f4f4f6' : theme === 'oled' ? '#000000' : '#121212';
+  mainWindow.setBackgroundColor(color);
 });
 
 // startup system check: is yt-dlp available? is ffmpeg?
@@ -468,6 +467,9 @@ ipcMain.on('window:maximize', () => {
 // App lifecycle
 // ------------------------------------------------------------
 
+// Linux gets a transparent window so the page can round its corners.
+const ROUNDED_WINDOW = process.platform === 'linux';
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1100,
@@ -477,7 +479,10 @@ function createWindow() {
     title: 'OpenWave',
     frame: false,        // no OS title bar — the app draws its own
     autoHideMenuBar: true,
-    backgroundColor: '#121218',
+    // a transparent surface lets the page round its own corners; only Linux
+    // needs it, Windows 11 already rounds frameless windows at the OS level
+    transparent: ROUNDED_WINDOW,
+    backgroundColor: ROUNDED_WINDOW ? '#00000000' : '#121218',
     icon: path.join(__dirname, 'assets', 'icon.png'), // taskbar / dock icon while running
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -486,6 +491,15 @@ function createWindow() {
     },
   });
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
+
+  // square off the corners while maximized — otherwise the desktop peeks through
+  const sendMaximized = () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('window:maximized', mainWindow.isMaximized());
+    }
+  };
+  mainWindow.on('maximize', sendMaximized);
+  mainWindow.on('unmaximize', sendMaximized);
 
   // With no application menu, Chromium's edit shortcuts die on Linux.
   // Re-wire the standard text-editing keys manually.

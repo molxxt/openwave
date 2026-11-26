@@ -83,6 +83,26 @@
 
 html, body { height: 100vh; }
 
+/* ---------- rounded window ----------
+   on Linux the window is transparent, so the page paints the surface and
+   rounds it — the desktop shows through the corners */
+:root { --win-r: 14px; }
+:root.r-sharp { --win-r: 0px; }
+:root.r-round { --win-r: 22px; }
+html {
+  overflow: hidden;
+  background: transparent;
+  /* a background image here stops the body's background from being painted
+     onto the canvas, which would square off the transparent corners */
+  background-image: linear-gradient(transparent, transparent);
+}
+body {
+  border-radius: var(--win-r);
+  transform: translateZ(0); /* fixed chrome gets clipped to the rounded surface */
+}
+body.maximized, body.no-round { border-radius: 0; }
+body.no-round { transform: none; }
+
 body {
   --rail-w: 76px;
   display: grid;
