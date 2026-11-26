@@ -15,8 +15,10 @@ contextBridge.exposeInMainWorld('api', {
   setBackground: (theme) => ipcRenderer.send('theme:background', theme),
   resolveStream: (track) => ipcRenderer.invoke('stream:resolve', track),
   openExternal: (url) => ipcRenderer.invoke('app:openExternal', url),
+  platform: process.platform,
   windowControls: {
     minimize: () => ipcRenderer.send('window:minimize'),
     close: () => ipcRenderer.send('window:close'),
+    maximize: () => ipcRenderer.send('window:maximize'),
   },
 });

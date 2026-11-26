@@ -458,6 +458,12 @@ ipcMain.handle('system:check', () => new Promise((resolve) => {
 ipcMain.on('window:minimize', () => { if (mainWindow) mainWindow.minimize(); });
 ipcMain.on('window:close', () => { if (mainWindow) mainWindow.close(); });
 
+ipcMain.on('window:maximize', () => {
+  if (!mainWindow) return;
+  if (mainWindow.isMaximized()) mainWindow.unmaximize();
+  else mainWindow.maximize();
+});
+
 // ------------------------------------------------------------
 // App lifecycle
 // ------------------------------------------------------------
@@ -469,6 +475,8 @@ function createWindow() {
     minWidth: 720,
     minHeight: 520,
     title: 'OpenWave',
+    frame: false,        // no OS title bar — the app draws its own
+    autoHideMenuBar: true,
     backgroundColor: '#121218',
     icon: path.join(__dirname, 'assets', 'icon.png'), // taskbar / dock icon while running
     webPreferences: {

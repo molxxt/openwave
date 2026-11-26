@@ -1075,6 +1075,16 @@ for (const btn of document.querySelectorAll('[data-clear]')) {
 // window controls (top bar buttons)
 $('btn-minimize').addEventListener('click', () => window.api.windowControls.minimize());
 $('btn-close').addEventListener('click', () => window.api.windowControls.close());
+$('btn-maximize').addEventListener('click', () => window.api.windowControls.maximize());
+// On Linux nothing maximizes a frameless drag region, so do it here.
+// Windows/macOS already handle it at the native caption level — hooking it
+// there too would maximize and immediately restore on a double-click.
+if (window.api.platform === 'linux') {
+  $('topbar').addEventListener('dblclick', (e) => {
+    if (e.target.closest('button, input, form, a')) return;
+    window.api.windowControls.maximize();
+  });
+}
 
 // playlists overview: create empty playlist
 $('pl-new-btn').addEventListener('click', () => {

@@ -84,7 +84,7 @@
 html, body { height: 100vh; }
 
 body {
-  --rail-w: 88px;
+  --rail-w: 76px;
   display: grid;
   grid-template-columns: var(--rail-w) 1fr;
   grid-template-rows: 64px 1fr;
@@ -99,7 +99,7 @@ body {
 }
 
 /* expanded sidebar: icons get labels */
-body.rail-expanded { --rail-w: 232px; }
+body.rail-expanded { --rail-w: 216px; }
 
 .ic { width: 1.05em; height: 1.05em; fill: currentColor; display: block; }
 
@@ -115,7 +115,7 @@ body.rail-expanded { --rail-w: 232px; }
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   display: grid;
-  grid-template-columns: var(--rail-w) 1fr auto;
+  grid-template-columns: minmax(var(--rail-w), auto) 1fr auto;
   align-items: center;
   gap: 16px;
   padding: 0 14px 0 24px;
@@ -2019,3 +2019,10 @@ body.rail-expanded #rail-playlists { display: flex; }
 .track img { border-radius: var(--r-xs); }
 .track .t-title { font-size: 13.5px; }
 .track .t-channel, .track .t-duration { font-size: 11.5px; }
+
+/* frameless window: the top bar is the drag handle */
+#topbar { -webkit-app-region: drag; }
+#topbar button,
+#topbar input,
+#topbar form,
+#topbar a { -webkit-app-region: no-drag; }
