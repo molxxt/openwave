@@ -13,6 +13,7 @@ const searchHistoryBox = $('search-history');
 const resultsTitle = $('results-title');
 const resultsList = $('results-list');
 const statusEl = $('status');
+const statusText = $('status-text');
 const tileRecsPills = $('tile-recs-pills');
 const tileLikedSub = $('tile-liked-sub');
 const tileLikedPills = $('tile-liked-pills');
@@ -205,11 +206,60 @@ function fmtTime(sec) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-function setStatus(msg, sticky = false) {
-  statusEl.textContent = msg;
-  statusEl.hidden = !msg;
-  if (!sticky && msg) setTimeout(() => { statusEl.hidden = true; }, 4000);
+let statusTimer = 0;
+let statusOutTimer = 0;
+let statusSticky = false;
+
+function hideStatus(immediate = false) {
+  clearTimeout(statusTimer);
+  statusTimer = 0;
+  if (statusEl.hidden) return;
+  if (immediate) {
+    statusEl.hidden = true;
+    statusEl.classList.remove('out');
+    return;
+  }
+  statusEl.classList.add('out');
+  clearTimeout(statusOutTimer);
+  statusOutTimer = setTimeout(() => {
+    statusEl.hidden = true;
+    statusEl.classList.remove('out');
+  }, 170);
 }
+
+function statusKind(msg, sticky) {
+  if (sticky && /…$/.test(msg)) return 'busy';
+  if (/error|fail|couldn['’]?t|could not|unavailable|denied|refused/i.test(msg)) return 'error';
+  return sticky ? 'note' : 'ok';
+}
+
+function setStatus(msg, sticky = false) {
+  clearTimeout(statusTimer);
+  clearTimeout(statusOutTimer);
+  statusTimer = 0;
+  if (!msg) { hideStatus(true); return; }
+  statusSticky = sticky;
+  statusText.textContent = msg;
+  statusEl.dataset.kind = statusKind(msg, sticky);
+  statusEl.hidden = false;
+  statusEl.classList.remove('out');
+  // replay the entrance when a new message replaces the previous one
+  statusEl.style.animation = 'none';
+  void statusEl.offsetWidth;
+  statusEl.style.animation = '';
+  if (!sticky) statusTimer = setTimeout(hideStatus, 2600);
+}
+
+statusEl.addEventListener('click', () => hideStatus());
+statusEl.addEventListener('mouseenter', () => {
+  if (statusSticky) return;
+  clearTimeout(statusTimer);
+  statusTimer = 0;
+});
+statusEl.addEventListener('mouseleave', () => {
+  if (statusSticky || statusEl.hidden) return;
+  statusTimer = setTimeout(hideStatus, 1400);
+});
 
 function pushRecent(track) {
   recentlyPlayed = recentlyPlayed.filter(t => t.id !== track.id);

@@ -75,7 +75,10 @@
     </button>
   </nav>
 
-  <div id="status" hidden></div>
+  <div id="status" hidden role="status" aria-live="polite" title="Dismiss">
+    <span class="st-dot" aria-hidden="true"></span>
+    <span id="status-text"></span>
+  </div>
 
   <!-- ======= main: one view at a time ======= -->
   <main id="content">
