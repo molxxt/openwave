@@ -22,6 +22,9 @@
       --dim: #a3a1b0;
       --muted: #85828f;
       --accent: #a5a6f6;
+      --surface: #15151a;
+      --surface-2: #1e1e26;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       --wrap: 1160px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -35,7 +38,11 @@
     ::-webkit-scrollbar-thumb { background: #2c2c38; border-radius: 6px; border: 2px solid var(--bg); }
     ::-webkit-scrollbar-thumb:hover { background: #3b3b4a; }
     body {
-      background: var(--bg);
+      background-color: var(--bg);
+      background-image:
+        radial-gradient(820px 460px at 82% -6%, rgba(165, 166, 246, 0.10), transparent 70%),
+        radial-gradient(640px 420px at 2% 16%, rgba(143, 211, 246, 0.05), transparent 70%);
+      background-repeat: no-repeat;
       color: var(--text);
       font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Inter, sans-serif;
       line-height: 1.65;
@@ -54,11 +61,13 @@
     /* ---------- nav ---------- */
     .nav {
       position: sticky; top: 0; z-index: 50;
-      background: var(--bg);
+      background: rgba(16, 16, 20, 0.62);
+      -webkit-backdrop-filter: blur(16px) saturate(1.15);
+      backdrop-filter: blur(16px) saturate(1.15);
       border-bottom: 1px solid transparent;
-      transition: border-color 0.2s ease;
+      transition: background 0.2s ease, border-color 0.2s ease;
     }
-    .nav.scrolled { border-bottom-color: var(--border); }
+    .nav.scrolled { background: rgba(16, 16, 20, 0.8); border-bottom-color: var(--border); }
     .nav-in { display: flex; align-items: center; gap: 26px; height: 68px; }
     .brand { display: inline-flex; align-items: center; gap: 9px; font-weight: 700; font-size: 17px; letter-spacing: -0.02em; color: var(--text); }
     .brand svg { width: 25px; height: 25px; flex: none; }
@@ -94,7 +103,7 @@
     .btn-ghost:hover { border-color: var(--text); }
 
     /* ---------- hero ---------- */
-    .hero { padding: 60px 0 76px; }
+    .hero { position: relative; overflow: hidden; padding: 60px 0 76px; }
     .hero-grid { display: grid; grid-template-columns: 1.02fr 0.98fr; gap: 56px; align-items: center; }
     .kicker { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
     .hero h1 {
@@ -106,6 +115,15 @@
     .hero p.sub { font-size: 16px; line-height: 1.7; color: var(--dim); max-width: 480px; text-wrap: pretty; }
     .hero .btnrow { margin: 28px 0 0; }
     .hero-visual { position: relative; }
+    .hero-visual::before {
+      content: ""; position: absolute; z-index: 0;
+      right: -40px; top: -40px; width: 74%; height: 82%;
+      background: rgba(165, 166, 246, 0.14);
+      border-radius: 50%;
+      filter: blur(64px);
+      pointer-events: none;
+    }
+    .hero-visual > * { position: relative; z-index: 1; }
 
     /* ---------- app mockup ---------- */
     .mk {
@@ -122,6 +140,7 @@
       background: var(--mk-bg); color: var(--mk-text);
       font-size: 12px; line-height: 1.4;
       text-align: left;
+      box-shadow: 0 24px 60px -40px rgba(0, 0, 0, 0.8);
     }
     .mk[data-theme="oled"] { --mk-bg: #000; --mk-raised: #0a0a0d; }
     .mk[data-theme="light"] { --mk-bg: #f6f5f9; --mk-raised: #ffffff; --mk-border: #e6e5ee; --mk-text: #1b1b22; --mk-dim: #6d6b7a; }
@@ -174,37 +193,68 @@
     .mk-fill { width: 34%; height: 100%; background: var(--acc); }
 
     /* ---------- demo controls ---------- */
-    .mk-panel {
-      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-      max-width: 640px; margin: 12px 0 0 auto; padding-top: 12px;
-      border-top: 1px solid var(--border);
+    .demo {
+      max-width: 640px; margin: 14px 0 0 auto;
+      padding: 12px 14px 13px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.038), rgba(255, 255, 255, 0.012)), var(--surface);
     }
-    .mk-panel .lab { font-size: 12px; color: var(--muted); }
-    .mk-swatches { display: flex; gap: 8px; }
-    .mk-swatches button { width: 20px; height: 20px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.22); cursor: pointer; padding: 0; }
+    .demo-lab { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 11px; font-size: 11px; color: var(--muted); }
+    .demo-val { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.02em; color: var(--dim); }
+    .demo-controls { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+    .demo-group { display: flex; align-items: center; gap: 9px; }
+    .demo-key { font-size: 11px; color: var(--dim); }
+    .mk-swatches { display: flex; gap: 7px; }
+    .mk-swatches button { width: 22px; height: 22px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.24); cursor: pointer; padding: 0; }
+    .mk-swatches button:hover { outline: 2px solid rgba(255, 255, 255, 0.3); outline-offset: 2px; }
     .mk-swatches button.on { outline: 2px solid var(--text); outline-offset: 2px; }
-    .mk-themes { display: flex; gap: 14px; margin-left: auto; }
-    .mk-themes button { border: 0; background: none; color: var(--muted); font-size: 12px; padding: 0; cursor: pointer; }
-    .mk-themes button.on { color: var(--text); text-decoration: underline; text-underline-offset: 4px; }
+    .mk-themes { display: inline-flex; gap: 2px; padding: 2px; border-radius: 8px; border: 1px solid var(--border); background: rgba(255, 255, 255, 0.04); }
+    .mk-themes button { height: 24px; padding: 0 9px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: 11.5px; cursor: pointer; }
+    .mk-themes button:hover { color: var(--text); }
+    .mk-themes button.on { background: var(--surface-2); color: var(--text); }
 
     /* ---------- sections ---------- */
     section { padding: 76px 0; }
     .sec-head { max-width: 600px; margin-bottom: 34px; }
     .sec-head h2 { font-size: clamp(27px, 3.4vw, 36px); line-height: 1.1; letter-spacing: -0.035em; font-weight: 700; margin-bottom: 10px; text-wrap: balance; }
     .sec-head p { color: var(--dim); font-size: 15.5px; max-width: 520px; }
-    .features-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 40px 28px; }
-    .card .ico { color: var(--accent); margin-bottom: 13px; }
-    .card .ico svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    .features-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    .card {
+      padding: 18px 17px 17px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.032), rgba(255, 255, 255, 0.010));
+      transition: border-color 0.2s ease;
+    }
+    .card .ico {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: grid; place-items: center;
+      background: rgba(165, 166, 246, 0.10);
+      color: var(--accent); margin-bottom: 13px;
+    }
+    .card .ico svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
     .card h3 { font-size: 14.5px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 5px; }
     .card p { font-size: 13px; line-height: 1.6; color: var(--dim); }
+    @media (hover: hover) {
+      .card:hover { border-color: rgba(255, 255, 255, 0.17); }
+    }
 
-    .how-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; margin-bottom: 26px; }
+    .how-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 26px; }
+    .how-card {
+      padding: 18px 18px 17px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0.008));
+    }
+    .how-card .num { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 10px; }
     .how-card h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
     .how-card p { font-size: 13px; color: var(--dim); line-height: 1.6; }
     .note {
       display: flex; gap: 12px; align-items: flex-start;
-      padding: 16px 18px; border-radius: 9px;
+      padding: 16px 18px; border-radius: 10px;
       border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.022);
       font-size: 13px; color: var(--dim); line-height: 1.65;
     }
     .note svg { width: 16px; height: 16px; flex: none; margin-top: 3px; color: var(--muted); stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
@@ -216,8 +266,13 @@
     .cc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     .community-card {
       display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-      padding: 20px; border-radius: 10px;
+      padding: 20px; border-radius: 12px;
       border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.012));
+      transition: border-color 0.2s ease;
+    }
+    @media (hover: hover) {
+      .community-card:hover { border-color: rgba(255, 255, 255, 0.16); }
     }
     .cc-icon { width: 40px; height: 40px; border-radius: 9px; display: grid; place-items: center; flex: none; background: #5865f2; color: #fff; }
     .cc-icon svg { width: 22px; height: 22px; fill: currentColor; }
@@ -235,7 +290,15 @@
     .cc-text a:hover { text-decoration: underline; }
 
     /* ---------- cta + footer ---------- */
-    .cta { text-align: center; padding-top: 56px; border-top: 1px solid var(--border); }
+    .cta {
+      position: relative; overflow: hidden; text-align: center;
+      padding: 56px 24px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background:
+        radial-gradient(560px 240px at 50% -10%, rgba(165, 166, 246, 0.14), transparent 70%),
+        var(--surface);
+    }
     .cta h2 { font-size: clamp(27px, 3.4vw, 38px); letter-spacing: -0.04em; line-height: 1.08; font-weight: 700; margin-bottom: 10px; }
     .cta p { color: var(--dim); font-size: 15px; margin: 0 auto 24px; max-width: 440px; }
     .cta .btnrow { justify-content: center; }
@@ -247,21 +310,27 @@
     .foot-links a:hover { color: var(--text); }
     .legal { margin-top: 24px; font-size: 11.5px; color: var(--muted); line-height: 1.6; max-width: 720px; }
 
+    .reveal { opacity: 0; transform: translateY(14px); transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1), border-color 0.2s ease; }
+    .reveal.in { opacity: 1; transform: none; }
+
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
+      .reveal { opacity: 1; transform: none; transition: none; }
     }
 
     /* ---------- responsive ---------- */
-    @media (max-width: 1020px) {
+    @media (max-width: 1100px) {
       .features-grid { grid-template-columns: repeat(2, 1fr); }
-      .how-grid { grid-template-columns: 1fr; gap: 24px; }
+    }
+    @media (max-width: 1020px) {
+      .how-grid { grid-template-columns: 1fr; gap: 14px; }
     }
     @media (max-width: 980px) {
       .hero { padding: 48px 0 64px; }
       .hero-grid { grid-template-columns: 1fr; gap: 40px; }
       .hero p.sub { max-width: 560px; }
       .mk { margin-inline: auto; }
-      .mk-panel { margin-inline: auto; }
+      .demo { margin-inline: auto; }
       .cc-grid { grid-template-columns: 1fr; }
     }
     @media (max-width: 820px) {
@@ -273,7 +342,7 @@
       section { padding: 56px 0; }
       .hero { padding: 36px 0 52px; }
       .hero h1 { font-size: 34px; }
-      .features-grid { grid-template-columns: 1fr; gap: 30px; }
+      .features-grid { grid-template-columns: 1fr; gap: 12px; }
       .mk { grid-template-columns: 46px 1fr; }
       .mk-rail button { width: 28px; height: 28px; }
       .mk-rail button svg { width: 13px; height: 13px; }
@@ -281,8 +350,9 @@
       .mk-tile:nth-child(2) { display: none; }
       .mk-seek, .mk-time { display: none; }
       .mk-greet span { display: none; }
-      .mk-panel { justify-content: flex-start; gap: 12px; }
-      .mk-themes { margin-left: 0; }
+      .demo { padding: 12px; }
+      .demo-controls { justify-content: flex-start; gap: 10px; }
+      .demo-group { width: 100%; justify-content: space-between; }
       .btn { width: 100%; }
       .btnrow { flex-direction: column; align-items: stretch; }
       .cta { padding-top: 44px; }
@@ -382,13 +452,21 @@
             </div>
           </div>
 
-          <div class="mk-panel">
-            <span class="lab">Live demo</span>
-            <div class="mk-swatches" id="mk-swatches" aria-label="Accent colors"></div>
-            <div class="mk-themes">
-              <button data-t="dark" class="on">Dark</button>
-              <button data-t="oled">OLED</button>
-              <button data-t="light">Light</button>
+          <div class="demo">
+            <div class="demo-lab"><span>Live demo</span><span class="demo-val" id="mk-val">#A5A6F6</span></div>
+            <div class="demo-controls">
+              <div class="demo-group">
+                <span class="demo-key">Accent</span>
+                <div class="mk-swatches" id="mk-swatches" aria-label="Accent color"></div>
+              </div>
+              <div class="demo-group">
+                <span class="demo-key">Theme</span>
+                <div class="mk-themes" role="group" aria-label="Theme">
+                  <button data-t="dark" class="on">Dark</button>
+                  <button data-t="oled">OLED</button>
+                  <button data-t="light">Light</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -397,35 +475,35 @@
 
     <section id="features">
       <div class="wrap">
-        <div class="sec-head">
+        <div class="sec-head reveal">
           <h2>Small app. Big player.</h2>
           <p>Everything you'd expect from a music player, minus the parts that get in the way.</p>
         </div>
         <div class="features-grid">
-          <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div><h3>Two sources, one box</h3><p>Search YouTube or SoundCloud from the same field. Flip the source toggle and go.</p></div>
-          <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 13v-2M10.5 13V9M14 13v-3M17.5 13v-2"/></svg></div><h3>Expanded player</h3><p>Big artwork, a live spectrum in your accent color, and the queue right beside it.</p></div>
-          <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><path d="M3 6h11M3 12h11M3 18h7"/><path d="M17 15v6M14 18h6"/></svg></div><h3>Playlists &amp; drag &amp; drop</h3><p>Drag songs out of search, reorder anything, right-click to add. It all persists.</p></div>
-          <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></div><h3>Picks up where you left</h3><p>Close it mid-song; tomorrow it resumes at the same second, with the queue intact.</p></div>
-          <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg></div><h3>Keyboard first</h3><p>Space, N, P, arrows, E, ? — every action has a key, with an overlay to remind you.</p></div>
-          <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></svg></div><h3>Make it yours</h3><p>Dark, OLED and light themes, three roundness presets, any accent color you like.</p></div>
-          <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="m4.3 7.6 7.7 4.4 7.7-4.4M12 12v9"/></svg></div><h3>Zero setup</h3><p>yt-dlp ships inside the app. Download one file, press play — no Python, no config.</p></div>
-          <div class="card"><div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4.2 2.9 7.4 7 9 4.1-1.6 7-4.8 7-9V6l-7-3z"/><path d="m9.5 12 2 2 3.5-4"/></svg></div><h3>Yours, locally</h3><p>Playlists, likes and history stay on your disk. No account, no telemetry, no cloud.</p></div>
+          <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div><h3>Two sources, one box</h3><p>Search YouTube or SoundCloud from the same field. Flip the source toggle and go.</p></div>
+          <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 13v-2M10.5 13V9M14 13v-3M17.5 13v-2"/></svg></div><h3>Expanded player</h3><p>Big artwork, a live spectrum in your accent color, and the queue right beside it.</p></div>
+          <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24"><path d="M3 6h11M3 12h11M3 18h7"/><path d="M17 15v6M14 18h6"/></svg></div><h3>Playlists &amp; drag &amp; drop</h3><p>Drag songs out of search, reorder anything, right-click to add. It all persists.</p></div>
+          <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></div><h3>Picks up where you left</h3><p>Close it mid-song; tomorrow it resumes at the same second, with the queue intact.</p></div>
+          <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg></div><h3>Keyboard first</h3><p>Space, N, P, arrows, E, ? — every action has a key, with an overlay to remind you.</p></div>
+          <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></svg></div><h3>Make it yours</h3><p>Dark, OLED and light themes, three roundness presets, any accent color you like.</p></div>
+          <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="m4.3 7.6 7.7 4.4 7.7-4.4M12 12v9"/></svg></div><h3>Zero setup</h3><p>yt-dlp ships inside the app. Download one file, press play — no Python, no config.</p></div>
+          <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4.2 2.9 7.4 7 9 4.1-1.6 7-4.8 7-9V6l-7-3z"/><path d="m9.5 12 2 2 3.5-4"/></svg></div><h3>Yours, locally</h3><p>Playlists, likes and history stay on your disk. No account, no telemetry, no cloud.</p></div>
         </div>
       </div>
     </section>
 
     <section id="how">
       <div class="wrap">
-        <div class="sec-head">
+        <div class="sec-head reveal">
           <h2>How it works</h2>
           <p>Boring in the best way: a thin Electron shell around tools people already trust.</p>
         </div>
         <div class="how-grid">
-          <div class="how-card"><h3>Electron shell</h3><p>One native window for Linux and Windows — frameless, fast, keyboard-driven, and light on memory.</p></div>
-          <div class="how-card"><h3>yt-dlp engine</h3><p>Bundled inside the app. It resolves audio from YouTube and SoundCloud on demand, so links never go stale.</p></div>
-          <div class="how-card"><h3>Local proxy</h3><p>Streams are piped through a tiny local server, which makes seeking instant and keeps nothing on disk.</p></div>
+          <div class="how-card reveal"><div class="num">01</div><h3>Electron shell</h3><p>One native window for Linux and Windows — frameless, fast, keyboard-driven, and light on memory.</p></div>
+          <div class="how-card reveal"><div class="num">02</div><h3>yt-dlp engine</h3><p>Bundled inside the app. It resolves audio from YouTube and SoundCloud on demand, so links never go stale.</p></div>
+          <div class="how-card reveal"><div class="num">03</div><h3>Local proxy</h3><p>Streams are piped through a tiny local server, which makes seeking instant and keeps nothing on disk.</p></div>
         </div>
-        <div class="note">
+        <div class="note reveal">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v.5M12 11v5"/></svg>
           <p><b>Honest note.</b> Streaming from YouTube technically violates their terms of service. Personal use has long been a gray area — the same one every FOSS media player lives in. OpenWave is <a href="https://github.com/molxxt/openwave/blob/main/LICENSE">MIT licensed</a>; don't sell it or ship it to app stores.</p>
         </div>
@@ -434,17 +512,17 @@
 
     <section id="community">
       <div class="wrap">
-        <div class="sec-head">
+        <div class="sec-head reveal">
           <h2>Come hang out.</h2>
           <p>Report bugs, request features, show off your playlists and your color setups.</p>
         </div>
         <div class="cc-grid">
-          <div class="community-card">
+          <div class="community-card reveal">
             <div class="cc-icon"><svg viewBox="0 0 24 24"><path d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.099.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg></div>
             <div class="cc-text"><h3>Join the Discord</h3><p>The server is being set up — until then, bugs and ideas are best <a href="https://github.com/molxxt/openwave/issues">filed on GitHub</a>.</p></div>
             <span class="cc-btn soon" aria-disabled="true">Invite coming soon</span>
           </div>
-          <div class="community-card">
+          <div class="community-card reveal">
             <div class="cc-icon root"><svg viewBox="0 0 24 24"><path d="M12 3C6.5 3 2 6.9 2 11.7c0 2.6 1.3 5 3.4 6.6-.1.9-.5 2.2-1.4 3.2 0 0 2.6-.4 4.6-1.9 1 .3 2.2.5 3.4.5 5.5 0 10-3.9 10-8.7S17.5 3 12 3z"/></svg></div>
             <div class="cc-text"><h3>Root community</h3><p>Quick questions and direct support on Root — a lighter, more direct way to reach us.</p></div>
             <a class="cc-btn accent" id="root-link" href="https://rootapp.gg/ADKCUErEgQqEXIoVkw7_Nw" target="_blank" rel="noopener">Open Root</a>
@@ -455,7 +533,7 @@
 
     <section id="download">
       <div class="wrap">
-        <div class="cta">
+        <div class="cta reveal">
           <h2>Ready when you are.</h2>
           <p>One download, no setup. Linux AppImage or Windows installer — take your pick.</p>
           <div class="btnrow">
@@ -492,6 +570,8 @@
     </div>
   </footer>
 
+  <noscript><style>.reveal { opacity: 1; transform: none; }</style></noscript>
+
   <script>
     // nav gets a border once the page moves
     (function () {
@@ -499,6 +579,28 @@
       const sync = () => nav.classList.toggle('scrolled', window.scrollY > 6);
       sync();
       window.addEventListener('scroll', sync, { passive: true });
+    })();
+
+    // softly reveal sections as they scroll into view
+    (function () {
+      const items = document.querySelectorAll('.reveal');
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduce || !('IntersectionObserver' in window)) {
+        items.forEach((el) => el.classList.add('in'));
+        return;
+      }
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('in');
+          io.unobserve(entry.target);
+        });
+      }, { rootMargin: '0px 0px -6% 0px', threshold: 0.05 });
+      items.forEach((el) => {
+        const siblingIndex = Array.from(el.parentElement.children).indexOf(el);
+        el.style.transitionDelay = (siblingIndex % 4) * 55 + 'ms';
+        io.observe(el);
+      });
     })();
 
     // point the download buttons at the right asset for this OS
@@ -526,8 +628,10 @@
       const mk = document.getElementById('mk');
       const row = document.getElementById('mk-swatches');
       const presets = ['#a5a6f6', '#8fd3f6', '#8fe3b0', '#f6a5c0', '#f6c46b', '#f68c6b'];
+      const val = document.getElementById('mk-val');
       function apply(color) {
         mk.style.setProperty('--acc', color);
+        val.textContent = color.toUpperCase();
         Array.from(row.children).forEach((b) => b.classList.toggle('on', b.dataset.c === color));
       }
       presets.forEach((c) => {
